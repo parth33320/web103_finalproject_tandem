@@ -269,7 +269,7 @@ Backend: Express, Node.js, PostgreSQL
 
 **Description:** A spinner is shown while data is being fetched from the server. Buttons are disabled and grayed out during active form submissions to prevent double-submits.
 
-![Feature 9 Loading States](https://github.com/user-attachments/assets/dd4422de-be3d-4bd1-a05b-d74a90f14e30)
+![Feature 9 Loading States](./assets/feature9.gif)
 
 
 ---
