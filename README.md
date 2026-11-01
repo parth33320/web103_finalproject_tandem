@@ -105,8 +105,7 @@ Backend: Express, Node.js, PostgreSQL
   - *Step 4 (Output):* The card component leaves the relationship tag space blank because it failed to fetch the relationship metadata.
   - *Explanation:* The component failing to display the relationship tag demonstrates a database communication failure where crucial data is missing from the screen.
 
-[gif goes here]
-
+![Feature 2 Reveal Card](./assets/feature2-reveal-card.gif)
 ---
 
 ### Feature 3 — Final Similarity Meter Dashboard
@@ -136,8 +135,7 @@ Backend: Express, Node.js, PostgreSQL
   - *Step 4 (Output):* The system renders an error message or "0% Similarity Meter" instead of the real calculation.
   - *Explanation:* The system failing to count the true friends illustrates a dashboard calculation failure that deprives the player of their round summary.
 
-[gif goes here]
-
+![Feature 3 Similarity Meter](./assets/feature3-similarity-meter.gif)
 ---
 
 ### Feature 4 — Personal Missed Words History
@@ -166,8 +164,7 @@ Backend: Express, Node.js, PostgreSQL
   - *Step 4 (Output):* The system displays a generic welcome message and an empty list because it failed to pull the personal history.
   - *Explanation:* The profile page showing an empty list highlights a tracking failure where the user's personal mistake history is lost.
 
-[gif goes here]
-
+![Feature 4 Missed Words](./assets/feature4-missed-words.gif)
 ---
 
 ### Feature 5 — Custom Deck Creator (CRUD)
@@ -196,8 +193,7 @@ Backend: Express, Node.js, PostgreSQL
   - *Step 4 (Output):* The user refreshes the browser and the new card disappears because the row was never saved.
   - *Explanation:* The system failing to send the database request, causing the card to disappear on refresh, demonstrates a lack of persistence.
 
-[gif goes here]
-
+![Feature 5 Deck CRUD](./assets/feature5-deck-crud.gif)
 ---
 
 ### Feature 6 — Split Direction Leaderboards
@@ -225,8 +221,7 @@ Backend: Express, Node.js, PostgreSQL
   - *Step 4 (Output):* The component does nothing and continues showing the old scores.
   - *Explanation:* The component freezing demonstrates a failure in separating or rendering the alternate direction rankings.
 
-[gif goes here]
-
+![Feature 6 Leaderboard](./assets/feature6-leaderboard.gif)
 ---
 
 ### Feature 7 — Graceful Error Handling ★
@@ -239,8 +234,7 @@ Backend: Express, Node.js, PostgreSQL
 
 **Description:** Every API route returns a meaningful HTTP status code and error message. The frontend catches fetch errors and displays user-friendly messages instead of blank screens or crashes. Applies to all six features.
 
-[gif goes here]
-
+![Feature 7 Graceful Error Handling](./assets/feature7-error-handling.gif)
 ---
 
 ### Feature 8 — Authentication / Protected Routes ✨
@@ -253,8 +247,7 @@ Backend: Express, Node.js, PostgreSQL
 
 **Description:** GitHub OAuth or username/password login. The Personal Missed Words History, Custom Deck Creator, and profile pages are protected routes that redirect unauthenticated users to the login screen.
 
-[gif goes here]
-
+![Feature 8 Protected Routes](./assets/feature8-protected-routes.gif)
 ---
 
 ### Feature 9 — Loading States & Button Safeguards ✨
@@ -283,8 +276,7 @@ Backend: Express, Node.js, PostgreSQL
 
 **Description:** Brief non-blocking toast notifications confirm successful actions (deck saved, word deleted, score submitted) and surface soft errors (score failed to save) without interrupting the user's flow.
 
-[gif goes here]
-
+![Feature 10 Toast Notifications](./assets/feature10-toasts.gif)
 ---
 
 ## Complete Rubric Coverage Checklist
