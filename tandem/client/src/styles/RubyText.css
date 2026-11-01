@@ -1,1 +1,12 @@
-/* TODO: RubyText styles. */
+.ruby-text {
+  ruby-position: over;
+  font-size: inherit;
+}
+.ruby-text rt {
+  font-size: 0.55em;
+  color: #555;
+  font-weight: normal;
+}
+.ruby-text-plain {
+  font-size: inherit;
+}/* TODO: RubyText styles. */
