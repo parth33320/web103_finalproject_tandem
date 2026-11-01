@@ -1,1 +1,137 @@
-/* TODO: Leaderboard styles. */
+.leaderboard-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 16px;
+  text-align: center;
+}
+.leaderboard-subtitle {
+  color: #666;
+  margin-bottom: 32px;
+}
+.leaderboard-controls {
+  background: #ffffff;
+  border: 1px solid var(--color-border, #deded3);
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 24px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.control-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.control-label {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: #203c36;
+}
+.toggle-buttons {
+  display: inline-flex;
+  background: #f0f0e8;
+  border-radius: 10px;
+  padding: 3px;
+}
+.toggle-btn {
+  border: none;
+  background: transparent;
+  padding: 8px 14px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  color: #555;
+  transition: all 0.2s ease;
+}
+.toggle-btn.active {
+  background: #ffffff;
+  color: var(--color-zh, #295f51);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+.toggle-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.reset-btn {
+  background: #fce8e6;
+  border: 1px solid #f5c6cb;
+  color: var(--color-ja, #b45140);
+  font-weight: 700;
+  padding: 8px 16px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.reset-btn:hover:not(:disabled) {
+  background: #f8d7da;
+}
+.reset-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.error-text {
+  color: #d32f2f;
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+.loading-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 48px;
+}
+.table-responsive {
+  background: #ffffff;
+  border: 1px solid var(--color-border, #deded3);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+}
+.empty-msg {
+  padding: 48px;
+  color: #666;
+  font-style: italic;
+}
+.leaderboard-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+.leaderboard-table th,
+.leaderboard-table td {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--color-border, #deded3);
+}
+.leaderboard-table th {
+  background: #faf9f5;
+  font-weight: 700;
+  color: var(--color-zh, #295f51);
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.leaderboard-table tr:last-child td {
+  border-bottom: none;
+}
+.rank-col {
+  font-weight: 700;
+  color: var(--color-ja, #b45140);
+  width: 80px;
+}
+.username-col {
+  font-weight: 600;
+  color: #203c36;
+}
+.score-col {
+  font-weight: 700;
+  color: var(--color-zh, #295f51);
+}
+.date-col {
+  color: #666;
+  font-size: 0.9rem;
+}/* TODO: Leaderboard styles. */
