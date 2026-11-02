@@ -80,7 +80,7 @@ Backend: Express, Node.js, PostgreSQL
 ![Feature 1 Timed Game Loop](./assets/feature1-timed-game-loop.gif)
 ---
 
-### Feature 2 — Dynamic Word Reveal Cards
+✅ ### Feature 2 — Dynamic Word Reveal Cards
 **Owner: Hunter Smith** | Related stories: 5, 6, 7
 
 **Rubric contributions:**
@@ -167,7 +167,7 @@ Backend: Express, Node.js, PostgreSQL
 ![Feature 4 Missed Words](./assets/feature4-missed-words.gif)
 ---
 
-### Feature 5 — Custom Deck Creator (CRUD)
+✅ ### Feature 5 — Custom Deck Creator (CRUD)
 **Owner: Robert Cunningham** | Related stories: 14, 15, 16, 17, 18
 
 **Rubric contributions:**
@@ -196,7 +196,7 @@ Backend: Express, Node.js, PostgreSQL
 ![Feature 5 Deck CRUD](./assets/feature5-deck-crud.gif)
 ---
 
-### Feature 6 — Split Direction Leaderboards
+✅ ### Feature 6 — Split Direction Leaderboards
 **Owner: Parth Patel** | Related stories: 19, 20, 21
 
 **Rubric contributions:**
@@ -224,7 +224,7 @@ Backend: Express, Node.js, PostgreSQL
 ![Feature 6 Leaderboard](./assets/feature6-leaderboard.gif)
 ---
 
-### Feature 7 — Graceful Error Handling ★
+✅ ### Feature 7 — Graceful Error Handling ★
 **Owner: All team members (Parth Patel coordinates)** | Related stories: 22, 23
 
 **Rubric contributions:**
@@ -237,7 +237,7 @@ Backend: Express, Node.js, PostgreSQL
 ![Feature 7 Graceful Error Handling](./assets/feature7-error-handling.gif)
 ---
 
-### Feature 8 — Authentication / Protected Routes ✨
+✅ ### Feature 8 — Authentication / Protected Routes ✨
 **Owner: Parth Patel** | Related stories: 24, 25
 
 **Rubric contributions:**
@@ -250,7 +250,7 @@ Backend: Express, Node.js, PostgreSQL
 ![Feature 8 Protected Routes](./assets/feature8-protected-routes.gif)
 ---
 
-### Feature 9 — Loading States & Button Safeguards ✨
+✅ ### Feature 9 — Loading States & Button Safeguards ✨
 **Owner: Hunter Smith** | Related stories: 26, 27
 
 **Rubric contributions:**
