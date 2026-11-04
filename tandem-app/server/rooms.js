@@ -1,6 +1,6 @@
 // Live rooms for Tandem. Rooms run in memory while a game is on; rooms, answers and chat are saved to Postgres.
 import { Server } from 'socket.io';
-import { HINT_COST, pointsFor, createRoom, canStart, chatChannel, canAdvance, nextCreator, allRead } from './room-logic.js';
+import { HINT_COST, pointsFor, createRoom, canStart, chatChannel, canAdvance, nextCreator, allRead, everyoneAnswered } from './room-logic.js';
 import { dealRound } from './content.js';
 
 const ROUND_MS = 20000, READ_CAP_MS = 12000, TOTAL = 10, LEAD_MS = 1500; // TOTAL must match TOTAL_ROUNDS in src/lib/room.ts
@@ -10,7 +10,8 @@ const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const rightFor = (r, p) => (p.dir === 'ja2zh' ? r.content?.zh.correct : r.correct);
 
 export function attachRooms(app, server, origin, db) {
-  const io = new Server(server, { cors: { origin } });
+  // Faster heartbeat: a dropped connection (phone sleeps, Wi-Fi lost) is noticed in ~15s instead of ~45s.
+  const io = new Server(server, { cors: { origin }, pingInterval: 10000, pingTimeout: 5000 });
   const rooms = new Map();
 
   const newCode = () => Array.from({ length: 5 }, () => CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)]).join('');
@@ -39,7 +40,7 @@ export function attachRooms(app, server, origin, db) {
     content: r.content ? { word: r.content.word, options: r.content.options, drop: r.content.drop, zh: { options: r.content.zh.options, drop: r.content.zh.drop } } : undefined,
     correct: r.phase === 'question' ? -1 : r.correct,
     correctZh: r.phase === 'question' || !r.content ? -1 : r.content.zh.correct,
-    players: [...r.players.values()].map(({ socketId, ...p }) => p),
+    players: [...r.players.values()].map(({ socketId, ...p }) => ({ ...p, online: !!socketId })),
   });
   const broadcast = (r) => io.to(r.code).emit('room:state', publicState(r));
 
@@ -90,6 +91,9 @@ export function attachRooms(app, server, origin, db) {
       const r = rooms.get(code);
       if (!r) return socket.emit('room:missing');
       r.creatorId ??= playerId;
+      r.ownerId ??= playerId;
+      // The room's original creator gets the host role back when they return.
+      if (playerId === r.ownerId) r.creatorId = playerId;
       const late = r.phase !== 'waiting';
       const p = r.players.get(playerId) ?? { id: playerId, name: String(name).slice(0, 24), role: late ? 'spectator' : 'player', score: 0, choice: null, hints: [], hintsTotal: 0 };
       p.dir = DIRS.includes(dir) ? dir : 'zh2ja';
@@ -118,22 +122,29 @@ export function attachRooms(app, server, origin, db) {
       const r = rooms.get(code);
       if (r && canAdvance(r, socket.data?.playerId)) nextCard(r);
     });
-    socket.on('disconnect', () => {
+    // A player left: closed the tab (room:leave, instant) or the connection dropped (disconnect).
+    const leave = () => {
       const { code, playerId } = socket.data ?? {};
       const r = rooms.get(code); const p = r?.players.get(playerId);
-      if (!r || !p || p.socketId !== socket.id) return;
+      if (!r || !p || p.socketId !== socket.id) return; // already handled, or they reconnected in another tab
       p.socketId = null;
       if (r.creatorId === playerId) r.creatorId = nextCreator(r) ?? playerId;
-      if (r.phase === 'question' && r.reading && allRead(r)) beginClock(r);
+      if (r.phase === 'question') {
+        // Don't keep waiting for someone who left: end the round if everyone still here has answered.
+        if (everyoneAnswered(r)) { endRound(r); return; } // endRound broadcasts
+        if (r.reading && allRead(r)) beginClock(r);
+      }
       broadcast(r);
-    });
+    };
+    socket.on('room:leave', leave);
+    socket.on('disconnect', leave);
     socket.on('answer:select', ({ code, choice }) => {
       const r = rooms.get(code); const p = r?.players.get(socket.data.playerId);
       if (!r || !p || r.phase !== 'question' || p.role !== 'player' || p.choice !== null) return;
       p.choice = Math.max(0, Math.min(3, Number(choice) | 0));
       db.query('INSERT INTO round_answers(room_code,round,player_key,choice,correct,hints_used) VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT DO NOTHING', [code, r.round, p.id, p.choice, p.choice === rightFor(r, p), p.hints]).catch(() => {});
       broadcast(r);
-      if ([...r.players.values()].filter((x) => x.role === 'player').every((x) => x.choice !== null)) { clearTimeout(r.timer); endRound(r); }
+      if (everyoneAnswered(r)) { clearTimeout(r.timer); endRound(r); }
     });
     socket.on('hint:use', ({ code, kind }) => {
       const r = rooms.get(code); const p = r?.players.get(socket.data.playerId);

@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 // @ts-expect-error plain JS server module
-import { createRoom, canStart, chatChannel, canAdvance, nextCreator, allRead } from "../../render-server/room-logic.js";
+import { createRoom, canStart, chatChannel, canAdvance, nextCreator, allRead } from "../../../server/room-logic.js";
 
 describe("live rooms", () => {
   it("only the room creator can start the game", () => {

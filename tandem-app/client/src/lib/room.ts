@@ -10,7 +10,7 @@ export const REVEAL_SECONDS = 4;
 export const TOTAL_ROUNDS = 10;
 
 export type Role = "player" | "spectator";
-export type Player = { id: string; name: string; dir?: Direction; role: Role; score: number; choice: number | null; hints?: HintKind[]; hintsTotal?: number };
+export type Player = { id: string; name: string; dir?: Direction; role: Role; score: number; choice: number | null; hints?: HintKind[]; hintsTotal?: number; online?: boolean };
 export type Chat = { id: string; name: string; text: string; channel?: "players" | "spectators" };
 export type Phase = "connecting" | "missing" | "waiting" | "question" | "reveal" | "final";
 export type RoomState = {
@@ -89,7 +89,17 @@ export function useRoom(code: string, me: Player) {
     });
     s.on("chat:history", (list: Chat[]) => setState((prev) => ({ ...prev, chat: list })));
     s.on("chat:message", (m: Chat) => setState((prev) => ({ ...prev, chat: [...prev.chat, m].slice(-100) })));
-    return () => { s.disconnect(); };
+    // Tell the server right away when the tab closes or navigates away, so the host role moves instantly.
+    const leave = () => { s.emit("room:leave", { code }); s.disconnect(); };
+    // Coming back via the browser's Back button can restore a frozen page: reconnect (which rejoins the same seat).
+    const back = (e: PageTransitionEvent) => { if (e.persisted && !s.connected) s.connect(); };
+    window.addEventListener("pagehide", leave);
+    window.addEventListener("pageshow", back);
+    return () => {
+      window.removeEventListener("pagehide", leave);
+      window.removeEventListener("pageshow", back);
+      s.disconnect();
+    };
   }, [code, me.id]);
 
   // Show this player the choices for their own direction.

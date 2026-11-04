@@ -7,7 +7,8 @@ export const correctFor = (code, round, seed) => hash(`${seed}-${code}-${round}-
 
 /** Pure room logic, separated from sockets so it can be tested. */
 export function createRoom(code) {
-  return { code, phase: 'waiting', round: 0, players: new Map(), creatorId: null, seed: Math.floor(Math.random() * 1e9) + 1, deadline: 0, correct: -1 };
+  // ownerId = whoever made the room; they get the host role back if they return after leaving.
+  return { code, phase: 'waiting', round: 0, players: new Map(), creatorId: null, ownerId: null, seed: Math.floor(Math.random() * 1e9) + 1, deadline: 0, correct: -1 };
 }
 export function canStart(r, playerId) { return r.phase === 'waiting' && r.creatorId === playerId; }
 export function chatChannel(p) { return p.role === 'spectator' ? 'spectators' : 'players'; }
@@ -17,4 +18,8 @@ export function canAdvance(r, playerId) { return r.phase === 'reveal' && r.creat
 /** When the creator leaves, the next connected player gets the "Next card" button. */
 export function nextCreator(r) { return [...r.players.values()].find((p) => p.socketId && p.role === 'player')?.id ?? [...r.players.values()].find((p) => p.socketId)?.id ?? null; }
 /** The clock starts once every connected player's host has finished reading. */
+/** Players still at the table (connected, not watching). */
+export function activePlayers(r) { return [...r.players.values()].filter((p) => p.socketId && p.role === 'player'); }
+/** True when every connected player has answered (and at least one is still here); people who left aren't waited for. */
+export function everyoneAnswered(r) { const a = activePlayers(r); return a.length > 0 && a.every((p) => p.choice !== null); }
 export function allRead(r) { return [...r.players.values()].filter((p) => p.socketId && p.role === 'player').every((p) => r.done?.has(p.id)); }

@@ -30,12 +30,32 @@ export const Route = createFileRoute("/room/$code")({
 
 const LETTERS = ["A", "B", "C", "D"];
 
+/** Small "(left)" tag for a player who closed their tab or lost connection. */
+function Left({ p }: { p: { online?: boolean } }) {
+  return p.online === false ? <span className="ml-1 text-xs italic opacity-80">(left)</span> : null;
+}
+
+/** Remembers this browser's seat (player id + name) per room, so a refresh or reopened tab gets the same seat back. */
+function useSeat(code: string, liveName: string) {
+  const key = `tandem-seat-${code.toUpperCase()}`;
+  const [saved] = useState(() => {
+    let s: { id?: string; name?: string } = {};
+    try { s = JSON.parse(localStorage.getItem(key) || "{}"); } catch {}
+    return { id: s.id || `u-${Math.random().toString(36).slice(2, 10)}`, name: s.name || "" };
+  });
+  const name = liveName || saved.name;
+  useEffect(() => {
+    try { localStorage.setItem(key, JSON.stringify({ id: saved.id, name })); } catch {}
+  }, [key, saved.id, name]);
+  return { id: saved.id, name };
+}
+
 function RoomPage() {
   const { code } = Route.useParams();
   const { s, set } = useSettings();
-  const name = s.name || "Guest";
-  const [uid] = useState(() => Math.random().toString(36).slice(2, 10));
-  const me = useMemo(() => ({ id: `u-${uid}`, name, dir: s.dir, role: "player" as const, score: 0, choice: null }), [name, uid, s.dir]);
+  const seat = useSeat(code, s.name);
+  const name = seat.name || "Guest";
+  const me = useMemo(() => ({ id: seat.id, name, dir: s.dir, role: "player" as const, score: 0, choice: null }), [name, seat.id, s.dir]);
   const { state, start, next, hostDone, choose, sendChat, takeHint } = useRoom(code, me);
   const meP = state.players.find((p) => p.id === me.id);
   const isSpectator = meP?.role === "spectator";
@@ -195,7 +215,7 @@ function Waiting({ state, onStart, isCreator }: { state: RoomState; onStart: () 
       <div className="glass mx-auto mt-8 grid grid-cols-2 gap-3 rounded-2xl p-6">
         {state.players.map((p, i) => (
           <motion.div key={p.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.15 }}
-            className="rounded-xl bg-secondary/60 px-4 py-3 text-left">🎴 {p.name}</motion.div>
+            className={`rounded-xl bg-secondary/60 px-4 py-3 text-left ${p.online === false ? "opacity-50" : ""}`}>🎴 {p.name}<Left p={p} /></motion.div>
         ))}
       </div>
       {isCreator ? (
@@ -402,8 +422,8 @@ function SpectatorView({ state, meName, onChat }: { state: RoomState; meName: st
         <h3 className="mb-3 text-xl font-bold">Live picks</h3>
         <ul className="grid grid-cols-2 gap-2">
           {active.map((p) => (
-            <motion.li key={p.id} layout className="flex justify-between rounded-lg bg-secondary/60 px-3 py-2 text-sm">
-              <span>{p.name}</span>
+            <motion.li key={p.id} layout className={`flex justify-between rounded-lg bg-secondary/60 px-3 py-2 text-sm ${p.online === false ? "opacity-50" : ""}`}>
+              <span>{p.name}<Left p={p} /></span>
               <AnimatePresence mode="wait">
                 <motion.span key={String(p.choice)} initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} className="font-semibold text-primary">
                   {p.choice === null ? "thinking…" : `chose ${LETTERS[p.choice]}: ${state.options[p.choice]}`}
@@ -431,7 +451,7 @@ function Final({ state, meId }: { state: RoomState; meId: string }) {
         {ranked.map((p, i) => (
           <motion.li key={p.id} initial={{ x: -30, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.3 + i * 0.15 }}
             className={`flex justify-between rounded-lg px-4 py-3 ${p.id === meId ? "bg-primary text-primary-foreground" : "bg-secondary/60"}`}>
-            <span>{i + 1}. {p.name}</span>
+            <span>{i + 1}. {p.name}<Left p={p} /></span>
             <span className="flex items-center gap-3"><span className="text-xs opacity-70">{p.hintsTotal ?? 0} clue{(p.hintsTotal ?? 0) === 1 ? "" : "s"}</span><b>{p.score}</b></span>
           </motion.li>
         ))}
