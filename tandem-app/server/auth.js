@@ -96,7 +96,12 @@ export function attachAuth(app, { clientUrl, serverUrl }) {
     if (!state || !sig || !same(sig, mac(`${state}.${redirect}`)) || req.query.state !== state) return fail('expired');
     if (req.query.error) return fail('denied');
     passport.authenticate('github', { session: false }, (err, player) => {
-      if (err || !player) { if (err) console.error('GitHub sign-in failed:', err.message); return fail('github'); }
+      if (err || !player) {
+        // GitHub's own answer (e.g. incorrect_client_credentials) is in oauthError.data; database errors have a code.
+        console.error('GitHub sign-in failed:', err ? `${err.name}: ${err.message}` : 'no player returned',
+          err?.oauthError?.data ?? err?.code ?? '', `(callback URL in use: ${serverUrl}/auth/github/callback)`);
+        return fail('github');
+      }
       const back = safePath(Buffer.from(redirect, 'base64url').toString());
       res.redirect(`${clientUrl}/auth/callback#token=${signToken(player.id)}&redirect=${encodeURIComponent(back)}`);
     })(req, res, next);

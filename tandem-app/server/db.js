@@ -129,8 +129,27 @@ export async function seedWords(client = pool) {
   await client.query(`SELECT setval(pg_get_serial_sequence('words', 'id'), GREATEST((SELECT MAX(id) FROM words), 1000))`);
 }
 
+// The older prototype (folder tandem/) used the same table names with different columns. If the database still has
+// those tables, move them into a "legacy" schema (nothing is deleted) so the current tables can be created.
+const LEGACY = { players: 'github_id', words: 'source', scores: 'correct' };
+async function moveLegacyTables() {
+  for (const [table, column] of Object.entries(LEGACY)) {
+    const { rows } = await pool.query(
+      `SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = current_schema() AND table_name = $1) AS has_table,
+              EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = $1 AND column_name = $2) AS has_column`,
+      [table, column]);
+    if (rows[0].has_table && !rows[0].has_column) {
+      await pool.query('CREATE SCHEMA IF NOT EXISTS legacy');
+      await pool.query(`DROP TABLE IF EXISTS legacy.${table} CASCADE`);
+      await pool.query(`ALTER TABLE ${table} SET SCHEMA legacy`);
+      console.warn(`Moved an old "${table}" table from the earlier prototype to legacy.${table}.`);
+    }
+  }
+}
+
 export async function migrate() {
   if (!pool) { console.warn('DATABASE_URL is not set: live rooms work, but sign-in, words, scores and the leaderboard are off.'); return; }
+  await moveLegacyTables();
   await pool.query(SCHEMA);
   await pool.query(UPGRADE);
   await seedWords();
