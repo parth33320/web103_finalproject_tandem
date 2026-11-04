@@ -36,7 +36,7 @@ function useTheme() {
 type Pointer = { x: number; y: number; down: boolean; seen: boolean };
 
 function Hand({ ptr }: { ptr: React.MutableRefObject<Pointer> }) {
-  const { scene } = useGLTF(handAsset.url);
+  const { scene } = useGLTF(modelUrl);
   const { size, viewport, camera } = useThree();
   const group = useRef<THREE.Group>(null);
   const vel = useRef({ x: 0, y: 0, px: 0, py: 0, dip: 0 });
@@ -139,4 +139,4 @@ export default function Hand3D() {
   );
 }
 
-useGLTF.preload?.(handAsset.url);
+useGLTF.preload?.(modelUrl);
