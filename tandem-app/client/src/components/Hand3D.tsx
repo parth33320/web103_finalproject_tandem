@@ -2,7 +2,8 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Environment, Lightformer, useGLTF } from "@react-three/drei";
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
-import handAsset from "@/assets/pointing-hand.glb.asset.json";
+import modelUrl from "@/assets/pointing-hand.glb?url";
+
 
 // Feel constants
 const HAND_PX = 300;        // on-screen height of the hand
