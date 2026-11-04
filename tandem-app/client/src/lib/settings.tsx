@@ -36,7 +36,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, []);
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", s.theme);
-    document.documentElement.dir = s.lang === "ar" ? "rtl" : "ltr";
+    // The table always reads left-to-right; only Arabic host text is marked rtl where it's shown.
+    document.documentElement.dir = "ltr";
     document.documentElement.lang = s.lang;
   }, [s.theme, s.lang]);
   const set = (p: Partial<Settings>) =>

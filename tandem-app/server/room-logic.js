@@ -12,3 +12,9 @@ export function createRoom(code) {
 export function canStart(r, playerId) { return r.phase === 'waiting' && r.creatorId === playerId; }
 export function chatChannel(p) { return p.role === 'spectator' ? 'spectators' : 'players'; }
 
+/** Only the creator deals the next card, and only after the reveal. */
+export function canAdvance(r, playerId) { return r.phase === 'reveal' && r.creatorId === playerId; }
+/** When the creator leaves, the next connected player gets the "Next card" button. */
+export function nextCreator(r) { return [...r.players.values()].find((p) => p.socketId && p.role === 'player')?.id ?? [...r.players.values()].find((p) => p.socketId)?.id ?? null; }
+/** The clock starts once every connected player's host has finished reading. */
+export function allRead(r) { return [...r.players.values()].filter((p) => p.socketId && p.role === 'player').every((p) => r.done?.has(p.id)); }

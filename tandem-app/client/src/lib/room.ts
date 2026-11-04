@@ -20,6 +20,8 @@ export type RoomState = {
   options: string[];
   correct: number;
   deadline: number;
+  /** True while the hosts are still reading the question; the clock hasn't started. */
+  reading?: boolean;
   players: Player[];
   chat: Chat[];
   creatorId?: string | undefined;
@@ -71,7 +73,12 @@ export function useRoom(code: string, me: Player) {
     sock.current = s;
     const join = () => s.emit("room:join", { code, playerId: me.id, name: me.name, dir: me.dir });
     s.on("connect", join);
-    s.on("room:missing", () => setState((p) => ({ ...p, phase: "missing" })));
+    let tries = 0;
+    s.on("room:missing", () => {
+      // A sleeping free server may still be starting up: retry a few times before giving up.
+      if (tries++ < 3) { setTimeout(join, 2500 * tries); return; }
+      setState((p) => ({ ...p, phase: "missing" }));
+    });
     s.on("room:state", (st: ServerState) => {
       // The server deals each card once and hides the right answers (-1) until the reveal.
       const { content, correctZh, missing: _m, ...rest } = st;
@@ -90,6 +97,8 @@ export function useRoom(code: string, me: Player) {
   return {
     state: set ? { ...state, options: set.options, correct: set.correct, drop: set.drop } : state,
     start: () => sock.current?.emit("round:start", { code }),
+    next: () => sock.current?.emit("round:next", { code }),
+    hostDone: (round: number) => sock.current?.emit("host:done", { code, round }),
     choose: (i: number) => sock.current?.emit("answer:select", { code, choice: i }),
     sendChat: (text: string) => sock.current?.emit("chat:send", { code, text }),
     takeHint: (kind: HintKind) => sock.current?.emit("hint:use", { code, kind }),

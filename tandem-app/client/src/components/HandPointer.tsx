@@ -19,7 +19,9 @@ export function HandPointer() {
   const [mode, setMode] = useState<"flat" | "3d" | null>(null);
   useEffect(() => {
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    setMode(!reduce && webglOk() ? "3d" : "flat");
+    // Touch screens: some phone graphics chips break the 3D textures, so use the flat hand.
+    const touch = window.matchMedia("(pointer: coarse)").matches;
+    setMode(!reduce && !touch && webglOk() ? "3d" : "flat");
   }, []);
   return (
     <ClientOnly fallback={null}>

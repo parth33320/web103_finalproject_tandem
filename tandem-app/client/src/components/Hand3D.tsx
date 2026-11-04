@@ -2,7 +2,7 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Environment, Lightformer, useGLTF } from "@react-three/drei";
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
-const handAsset = { url: "/models/pointing-hand.glb" };
+import handAsset from "@/assets/pointing-hand.glb.asset.json";
 
 // Feel constants
 const HAND_PX = 300;        // on-screen height of the hand
@@ -85,7 +85,9 @@ function Hand({ ptr }: { ptr: React.MutableRefObject<Pointer> }) {
     v.x += (sx - v.x) * 0.2; v.y += (sy - v.y) * 0.2;
     v.dip += ((p.down ? 1 : 0) - v.dip) * (1 - Math.exp(-25 * dt));
 
-    const scale = (HAND_PX / size.height) * vp.height;
+    // Smaller hand on tablets/phones so it never covers the answers.
+    const px = Math.min(HAND_PX, Math.max(150, size.width * 0.22));
+    const scale = (px / size.height) * vp.height;
     g.scale.setScalar(scale * (1 - v.dip * 0.08));
     g.position.z = -v.dip * TAP_DIP * scale;
     const edge = p.x / size.width - 0.5;

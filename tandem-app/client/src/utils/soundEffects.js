@@ -11,6 +11,16 @@ function audio() {
   return ctx;
 }
 
+// Browsers (especially phones) block audio until the first touch: unlock on the first gesture.
+if (typeof window !== "undefined") {
+  const unlock = () => {
+    const a = audio();
+    if (a) { const b = a.createBuffer(1, 1, 22050); const src = a.createBufferSource(); src.buffer = b; src.connect(a.destination); src.start(0); }
+    if (a?.state === "running") ["pointerdown", "keydown", "touchend"].forEach((e) => window.removeEventListener(e, unlock));
+  };
+  ["pointerdown", "keydown", "touchend"].forEach((e) => window.addEventListener(e, unlock, { passive: true }));
+}
+
 /** Turn every sound effect on or off. */
 export function setSfxMuted(m) { muted = !!m; }
 

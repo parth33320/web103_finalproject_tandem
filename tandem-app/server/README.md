@@ -1,19 +1,13 @@
-# Tandem game server (folder `tandem-server`)
+# Tandem game server (folder `server`)
 
-Upload this whole `tandem-server` folder into the repo `web103_finalproject_tandem`
-(GitHub → Add file → Upload files → drag the folder itself → Commit changes).
-It is a new folder, so it never overwrites teammates' code.
-
-Render → New + → Web Service → repo `web103_finalproject_tandem`
-- Name: `tandem-server`
-- Root Directory: `tandem-server`
+Render → New + → Web Service → your repo
+- Root Directory: `server`
 - Build Command: `npm install`
 - Start Command: `npm start`
 - Instance Type: Free
 - Environment Variables:
-  - `DATABASE_URL` = your Internal Database URL (with the new password)
-  - `CLIENT_ORIGIN` (optional, add later) = your website address, e.g. `https://tandem-web.onrender.com` (no `/` at the end)
+  - `DATABASE_URL` = your Internal Database URL
+  - `CLIENT_ORIGIN` (add after the website is live) = `https://tandem-table.localhost.cc` (no `/` at the end)
 
-Click Deploy Web Service, wait for green "Live".
-Check it works: open `https://<your-server-address>/health` → `{"ok":true}`.
-Copy that address — the website needs it as `VITE_API_URL` (see tandem-web/HOSTING.md).
+Wait for green "Live". Check: open `https://<server-address>/health` → `{"ok":true}`.
+Copy that address — the website needs it as `VITE_API_URL`.

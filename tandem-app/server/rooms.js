@@ -1,9 +1,9 @@
 // Live rooms for Tandem. Rooms run in memory while a game is on; rooms, answers and chat are saved to Postgres.
 import { Server } from 'socket.io';
-import { HINT_COST, pointsFor, createRoom, canStart, chatChannel } from './room-logic.js';
+import { HINT_COST, pointsFor, createRoom, canStart, chatChannel, canAdvance, nextCreator, allRead } from './room-logic.js';
 import { dealRound } from './content.js';
 
-const ROUND_MS = 20000, REVEAL_MS = 4000, TOTAL = 10, LEAD_MS = 1500; // TOTAL must match TOTAL_ROUNDS in src/lib/room.ts
+const ROUND_MS = 20000, READ_CAP_MS = 12000, TOTAL = 10, LEAD_MS = 1500; // TOTAL must match TOTAL_ROUNDS in src/lib/room.ts
 const DIRS = ['zh2ja', 'ja2zh', 'en'];
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 // Japanese speakers guessing Chinese are scored against the Chinese meaning.
@@ -34,7 +34,7 @@ export function attachRooms(app, server, origin, db) {
   });
 
   const publicState = (r) => ({
-    code: r.code, phase: r.phase === 'dealing' ? 'waiting' : r.phase, round: r.round, deadline: r.deadline, creatorId: r.creatorId,
+    code: r.code, phase: r.phase === 'dealing' ? 'waiting' : r.phase, round: r.round, deadline: r.deadline, reading: !!r.reading, creatorId: r.creatorId,
     // Same card for everyone; the right answers stay hidden until the reveal.
     content: r.content ? { word: r.content.word, options: r.content.options, drop: r.content.drop, zh: { options: r.content.zh.options, drop: r.content.zh.drop } } : undefined,
     correct: r.phase === 'question' ? -1 : r.correct,
@@ -47,7 +47,8 @@ export function attachRooms(app, server, origin, db) {
     r.seenIds ??= [];
     const content = dealRound(Math.floor(Math.random() * 1e9), r.seenIds); // random shuffle, never repeats a card in a game
     r.seenIds.push(content.word.id);
-    Object.assign(r, { round, phase: 'question', content, correct: content.correct, deadline: Date.now() + lead + ROUND_MS });
+    // The clock waits for the hosts to finish reading (at most READ_CAP_MS).
+    Object.assign(r, { round, phase: 'question', content, correct: content.correct, deadline: 0, reading: true, done: new Set() });
     for (const p of r.players.values()) {
       p.choice = null; p.hints = [];
       if (p.role === 'spectator') {
@@ -58,21 +59,29 @@ export function attachRooms(app, server, origin, db) {
     }
     broadcast(r);
     clearTimeout(r.timer);
-    r.timer = setTimeout(() => endRound(r), lead + ROUND_MS);
+    r.timer = setTimeout(() => beginClock(r), lead + READ_CAP_MS);
     db.query('UPDATE rooms SET phase=$2, round=$3 WHERE code=$1', [r.code, 'question', round]).catch(() => {});
+  }
+  function beginClock(r) {
+    if (r.phase !== 'question' || !r.reading) return;
+    clearTimeout(r.timer);
+    r.reading = false; r.deadline = Date.now() + ROUND_MS;
+    broadcast(r);
+    r.timer = setTimeout(() => endRound(r), ROUND_MS);
   }
   function endRound(r) {
     if (r.phase !== 'question') return;
-    r.phase = 'reveal'; r.deadline = Date.now() + REVEAL_MS;
+    clearTimeout(r.timer);
+    r.phase = 'reveal'; r.reading = false; r.deadline = 0;
     for (const p of r.players.values()) if (p.role === 'player' && p.choice === rightFor(r, p)) p.score += pointsFor(p.hints);
-    broadcast(r);
-    r.timer = setTimeout(() => {
-      if (r.round >= TOTAL) {
-        r.phase = 'final'; broadcast(r);
-        db.query('UPDATE rooms SET phase=$2 WHERE code=$1', [r.code, 'final']).catch(() => {});
-        setTimeout(() => rooms.delete(r.code), 30 * 60_000);
-      } else startRound(r, r.round + 1);
-    }, REVEAL_MS);
+    broadcast(r); // stays on the reveal until the creator presses "Next card"
+  }
+  function nextCard(r) {
+    if (r.round >= TOTAL) {
+      r.phase = 'final'; broadcast(r);
+      db.query('UPDATE rooms SET phase=$2 WHERE code=$1', [r.code, 'final']).catch(() => {});
+      setTimeout(() => rooms.delete(r.code), 30 * 60_000);
+    } else startRound(r, r.round + 1, LEAD_MS);
   }
 
   io.on('connection', (socket) => {
@@ -98,6 +107,25 @@ export function attachRooms(app, server, origin, db) {
     socket.on('round:start', ({ code }) => {
       const r = rooms.get(code);
       if (r && canStart(r, socket.data.playerId)) { r.phase = 'dealing'; startRound(r, 1, LEAD_MS); }
+    });
+    socket.on('host:done', ({ code, round }) => {
+      const r = rooms.get(code); const id = socket.data?.playerId;
+      if (!r || !id || r.phase !== 'question' || !r.reading || Number(round) !== r.round) return;
+      r.done.add(id);
+      if (allRead(r)) beginClock(r);
+    });
+    socket.on('round:next', ({ code }) => {
+      const r = rooms.get(code);
+      if (r && canAdvance(r, socket.data?.playerId)) nextCard(r);
+    });
+    socket.on('disconnect', () => {
+      const { code, playerId } = socket.data ?? {};
+      const r = rooms.get(code); const p = r?.players.get(playerId);
+      if (!r || !p || p.socketId !== socket.id) return;
+      p.socketId = null;
+      if (r.creatorId === playerId) r.creatorId = nextCreator(r) ?? playerId;
+      if (r.phase === 'question' && r.reading && allRead(r)) beginClock(r);
+      broadcast(r);
     });
     socket.on('answer:select', ({ code, choice }) => {
       const r = rooms.get(code); const p = r?.players.get(socket.data.playerId);

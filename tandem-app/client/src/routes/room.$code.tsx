@@ -36,10 +36,10 @@ function RoomPage() {
   const name = s.name || "Guest";
   const [uid] = useState(() => Math.random().toString(36).slice(2, 10));
   const me = useMemo(() => ({ id: `u-${uid}`, name, dir: s.dir, role: "player" as const, score: 0, choice: null }), [name, uid, s.dir]);
-  const { state, start, choose, sendChat, takeHint } = useRoom(code, me);
+  const { state, start, next, hostDone, choose, sendChat, takeHint } = useRoom(code, me);
   const meP = state.players.find((p) => p.id === me.id);
   const isSpectator = meP?.role === "spectator";
-  useHostVoice(state, me.id, name);
+  useHostVoice(state, me.id, name, hostDone);
   useSoundEffects(state, me.id);
 
   return (
@@ -60,13 +60,14 @@ function RoomPage() {
       </header>
 
       <div className="relative z-10">
-        {state.phase === "connecting" && <Notice title="Connecting to the table…" body="Free servers can take up to a minute to wake up." />}
+        {state.phase === "connecting" && <Notice title="Waking up the game server…" body="Free servers can take up to a minute to wake up." />}
         {state.phase === "missing" && <Notice title="Room not found" body="Check the code with your friend, or create a new room." link />}
         {state.phase === "waiting" && <Waiting state={state} onStart={start} isCreator={state.creatorId === me.id} />}
         {(state.phase === "question" || state.phase === "reveal") &&
           (isSpectator
             ? <SpectatorView state={state} meName={name} onChat={sendChat} />
             : <PlayerView state={state} meId={me.id} meName={name} onChoose={choose} onHint={takeHint} />)}
+        {state.phase === "reveal" && <NextBar state={state} meId={me.id} onNext={next} />}
         {state.phase !== "final" && !isSpectator && <PlayerChat chat={state.chat} onSend={sendChat} />}
         {state.phase === "final" && <Final state={state} meId={me.id} />}
       </div>
@@ -74,7 +75,7 @@ function RoomPage() {
   );
 }
 
-function useHostVoice(state: RoomState, meId: string, name: string) {
+function useHostVoice(state: RoomState, meId: string, name: string, hostDone: (round: number) => void) {
   const { s } = useSettings();
   const L = LINES[s.lang];
   const say = (t: string) => speak(t, s.lang, s.voice, s.muted);
@@ -92,7 +93,11 @@ function useHostVoice(state: RoomState, meId: string, name: string) {
   useEffect(() => {
     if (state.phase === "question" && meP?.role === "player" && state.options.length === 4) {
       const w = wordOf(state);
-      say(`${L.round(state.round)} ${L.question(s.dir === "ja2zh" ? w.zhForm : w.form, state.options)}`);
+      const round = state.round;
+      // The countdown only starts once this host has finished reading (the server caps the wait).
+      say(`${L.round(round)} ${L.question(s.dir === "ja2zh" ? w.zhForm : w.form, state.options)}`).finally(() => hostDone(round));
+    } else if (state.phase === "question") {
+      hostDone(state.round);
     }
     if (state.phase === "reveal" && meP?.role === "player") {
       const verdict = meP.choice === null ? L.timeUp : meP.choice === state.correct ? L.correct : L.wrong;
@@ -120,7 +125,7 @@ function useHostVoice(state: RoomState, meId: string, name: string) {
   }, [usedKey, state.round]);
 
   useEffect(() => {
-    if (state.phase !== "question" || meP?.role !== "player") return;
+    if (state.phase !== "question" || meP?.role !== "player" || !state.deadline) return;
     const id = setInterval(() => {
       const left = Math.ceil((state.deadline - Date.now()) / 1000);
       const key = `${state.round}-${left}`;
@@ -136,7 +141,7 @@ function useHostVoice(state: RoomState, meId: string, name: string) {
 function CineLayer({ state, meId }: { state: RoomState; meId: string }) {
   const left = useSecondsLeft(state.deadline);
   const meP = state.players.find((p) => p.id === meId);
-  const tension = state.phase === "question" && left > 0 && left <= 5;
+  const tension = state.phase === "question" && !!state.deadline && left > 0 && left <= 5;
   const reveal = state.phase === "reveal";
   const good = reveal && meP?.role === "player" ? meP.choice === (meP.dir === "ja2zh" ? (state.zh?.correct ?? -1) : state.correct) : null;
   return (
@@ -204,8 +209,11 @@ function Waiting({ state, onStart, isCreator }: { state: RoomState; onStart: () 
   );
 }
 
-function Timer({ deadline, reveal }: { deadline: number; reveal: boolean }) {
+function Timer({ deadline, reveal, reading }: { deadline: number; reveal: boolean; reading: boolean }) {
   const left = useSecondsLeft(deadline);
+  if (reading && !reveal) return (
+    <div title="The host is reading" className="glass flex h-14 w-14 shrink-0 items-center justify-center rounded-full text-xl text-primary md:h-20 md:w-20 md:text-2xl"><span className="animate-pulse">🎙</span></div>
+  );
   return (
     <div className={`glass flex h-14 w-14 shrink-0 items-center justify-center rounded-full font-display text-2xl font-bold md:h-20 md:w-20 md:text-4xl ${!reveal && left <= 5 ? "text-destructive" : "text-primary"}`}>
       {reveal ? "—" : left}
@@ -219,36 +227,36 @@ function WordFace({ state, meName }: { state: RoomState; meName: string }) {
   const reveal = state.phase === "reveal";
   const showZh = s.dir === "ja2zh";
   return (
-    <div className="flex h-full flex-col p-6 text-center">
+    <div dir="ltr" className="flex h-full min-h-0 flex-col p-5 text-center md:p-6">
       <span className="text-xs uppercase tracking-[0.3em] opacity-60">Card {state.round} / {TOTAL_ROUNDS}</span>
       {reveal ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-3">
           <span className="rounded-full bg-accent px-3 py-1 text-xs font-bold uppercase tracking-widest text-accent-foreground">{RELATION_LABEL[w.relation]}</span>
-          <div className="grid w-full grid-cols-[1fr_auto_1fr] items-start gap-2">
+          <div className="grid w-full grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-start gap-2">
             <div>
               <span className="block text-[10px] uppercase tracking-widest opacity-60">Japanese</span>
-              <span className="block font-['Noto_Serif_JP'] text-3xl font-semibold md:text-4xl">{w.form}</span>
+              <span className="block font-['Noto_Serif_JP'] text-2xl font-semibold [overflow-wrap:anywhere] md:text-4xl">{w.form}</span>
               <span className="block text-xs opacity-70">{w.reading}</span>
-              <span className="mt-1 block text-sm font-semibold">{w.ja}</span>
+              <span className="mt-1 block text-xs font-semibold [overflow-wrap:anywhere] md:text-sm">{w.ja}</span>
             </div>
             <span className="pt-6 text-xl opacity-50">↔</span>
             <div>
               <span className="block text-[10px] uppercase tracking-widest opacity-60">Chinese</span>
-              <span className="block font-['Noto_Serif_JP'] text-3xl font-semibold md:text-4xl">{w.zhForm}</span>
+              <span className="block font-['Noto_Serif_JP'] text-2xl font-semibold [overflow-wrap:anywhere] md:text-4xl">{w.zhForm}</span>
               <span className="block text-xs opacity-70">{w.pinyin}</span>
-              <span className="mt-1 block text-sm font-semibold">{w.zh}</span>
+              <span className="mt-1 block text-xs font-semibold [overflow-wrap:anywhere] md:text-sm">{w.zh}</span>
             </div>
           </div>
         </div>
       ) : (
         <div className="flex flex-1 flex-col items-center justify-center">
-          <span className="font-['Noto_Serif_JP'] text-5xl font-semibold md:text-7xl">{showZh ? w.zhForm : w.form}</span>
+          <span className="max-w-full font-['Noto_Serif_JP'] font-semibold [overflow-wrap:anywhere]" style={{ fontSize: "clamp(2.5rem, 7vw, 4.5rem)" }}>{showZh ? w.zhForm : w.form}</span>
           <span className="mt-2 text-sm opacity-70">{showZh ? w.pinyin : w.reading}</span>
-          <span className="mt-4 font-display text-xl italic">What does it mean in {showZh ? "Chinese" : "Japanese"}?</span>
+          <span dir="ltr" className="mt-4 px-2 font-display text-lg italic md:text-xl">What does it mean in {showZh ? "Chinese" : "Japanese"}?</span>
         </div>
       )}
       {reveal && (
-        <div className="rounded-lg border border-paper-ink/20 p-3 text-xs italic">
+        <div className="max-h-28 overflow-y-auto rounded-lg border border-paper-ink/20 p-3 text-[11px] italic leading-snug [overflow-wrap:anywhere] md:text-xs">
           ✦ For {meName}: {personalFact(w, meName, state.round)}
         </div>
       )}
@@ -266,9 +274,9 @@ function Stage({ state, meName, children, side }: { state: RoomState; meName: st
           <div className="hidden md:block"><Deck round={state.round} /></div>
           <motion.div key={state.round} initial={{ x: -260, y: -40, rotate: -12, opacity: 0 }} animate={{ x: 0, y: 0, rotate: 0, opacity: 1 }}
             transition={{ duration: 0.6, ease: "easeOut" }}>
-            <PageCard flipped={flipped} className="h-[360px] w-[270px] md:h-[420px] md:w-[320px]" front={null} back={<WordFace state={state} meName={meName} />} />
+            <PageCard flipped={flipped} className="h-[min(360px,62vh)] w-[min(270px,72vw)] md:h-[420px] md:w-[320px]" front={null} back={<WordFace state={state} meName={meName} />} />
           </motion.div>
-          <Timer deadline={state.deadline} reveal={state.phase === "reveal"} />
+          <Timer deadline={state.deadline} reveal={state.phase === "reveal"} reading={!!state.reading} />
         </div>
         {children}
       </div>
@@ -285,7 +293,7 @@ function PlayerView({ state, meId, meName, onChoose, onHint }: { state: RoomStat
   const gone = used.includes("eliminate") && !reveal ? (state.drop ?? eliminated(state.code, state.round, state.correct)) : [];
   return (
     <Stage state={state} meName={meName}>
-      <div className="mx-auto mt-10 grid max-w-sm grid-cols-2 justify-items-center gap-3 pb-10 [perspective:1200px] md:flex md:max-w-none md:justify-center md:gap-4">
+      <div className="mx-auto mt-8 grid w-full max-w-sm grid-cols-2 justify-items-center gap-3 pb-8 [perspective:1200px] md:flex md:max-w-none md:justify-center md:gap-4">
         {state.options.map((opt, i) => {
           const rot = (i - 1.5) * 6;
           const isRight = reveal && i === state.correct;
@@ -296,10 +304,10 @@ function PlayerView({ state, meId, meName, onChoose, onHint }: { state: RoomStat
               animate={{ y: mine === i ? -30 : Math.abs(i - 1.5) * 10, opacity: gone.includes(i) ? 0.15 : 1, filter: gone.includes(i) ? "grayscale(1) blur(1px)" : "none", rotate: rot, scale: isRight ? 1.08 : 1 }}
               whileHover={mine === null && !reveal && !gone.includes(i) ? { y: -24, rotate: rot / 2, scale: 1.05 } : {}}
               transition={{ delay: 0.9 + i * 0.1, type: "spring", stiffness: 200, damping: 18 }}
-              className={`paper-card relative flex h-36 w-full max-w-40 flex-col items-center justify-center rounded-xl p-3 text-center md:h-48 md:w-40 md:p-4
+              className={`paper-card relative flex h-32 w-full max-w-40 flex-col items-center justify-center overflow-hidden rounded-xl px-3 pb-3 pt-8 text-center sm:h-36 md:h-44 md:w-36 md:px-4 lg:h-48 lg:w-40
                 ${isRight ? "ring-4 ring-success" : ""} ${isWrongPick ? "ring-4 ring-destructive" : ""} ${mine === i && !reveal ? "ring-4 ring-primary" : ""}`}>
               <span className="absolute left-3 top-2 font-display text-2xl font-bold opacity-60">{LETTERS[i]}</span>
-              <span className="font-display text-xl font-semibold leading-tight">{opt}</span>
+              <span className="max-w-full font-display font-semibold leading-tight [hyphens:auto] [overflow-wrap:anywhere]" style={{ fontSize: `clamp(0.85rem, ${opt.length > 14 ? 1.6 : 2.2}vw, ${opt.length > 14 ? "1.05rem" : "1.25rem"})` }}>{opt}</span>
             </motion.button>
           );
         })}
@@ -314,6 +322,24 @@ const HINT_LABEL: Record<HintKind, { icon: string; title: string }> = {
   example: { icon: "文", title: "Reading" },
   category: { icon: "◈", title: "Category" },
 };
+
+function NextBar({ state, meId, onNext }: { state: RoomState; meId: string; onNext: () => void }) {
+  const isCreator = state.creatorId === meId;
+  const creator = state.players.find((p) => p.id === state.creatorId)?.name ?? "the room creator";
+  const last = state.round >= TOTAL_ROUNDS;
+  return (
+    <div className="relative z-20 mx-auto mb-40 flex max-w-xl justify-center px-4 lg:mb-10">
+      {isCreator ? (
+        <motion.button initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.2 }} onClick={onNext}
+          className="rounded-xl bg-primary px-10 py-4 text-lg font-bold text-primary-foreground shadow-lg hover:brightness-110">
+          {last ? "See the results" : "Next card →"}
+        </motion.button>
+      ) : (
+        <p className="glass animate-pulse rounded-xl px-5 py-3 text-center text-muted-foreground">Waiting for {creator} to deal the next card…</p>
+      )}
+    </div>
+  );
+}
 
 function CluesTray({ state, used, locked, onHint }: { state: RoomState; used: HintKind[]; locked: boolean; onHint: (k: HintKind) => void }) {
   const w = wordOf(state);
@@ -456,7 +482,7 @@ function useSoundEffects(state: RoomState, meId: string) {
     }
   }, [state.phase, state.round]);
   useEffect(() => {
-    if (state.phase !== "question") return;
+    if (state.phase !== "question" || !state.deadline) return;
     let last = -1;
     const id = setInterval(() => {
       const left = Math.ceil((state.deadline - Date.now()) / 1000);

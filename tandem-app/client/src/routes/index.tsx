@@ -41,7 +41,8 @@ function Index() {
   const local = voices.filter((v) => v.localService);
   const online = voices.filter((v) => !v.localService);
   const sortV = (a: SpeechSynthesisVoice[]) => [...a].sort((x, y) => Number(failed.includes(x.name)) - Number(failed.includes(y.name)));
-  const label = (v: SpeechSynthesisVoice) => v.name + (failed.includes(v.name) ? " (may not work)" : "");
+  // Neutral labels: never show gendered voice names like "David" or "Samantha".
+  const label = (v: SpeechSynthesisVoice) => `Device voice ${voices.indexOf(v) + 1}${v.localService ? "" : " (online)"}` + (failed.includes(v.name) ? " (may not work)" : "");
 
   useEffect(() => {
     // Warm up the voice list — some browsers only populate it after a first call.
@@ -109,8 +110,8 @@ function Index() {
               <div className="flex gap-2">
                 <select value={s.voice} onChange={(e) => set({ voice: e.target.value })}
                   className="w-0 min-w-0 flex-1 truncate rounded-lg border border-input bg-background/60 px-3 py-2">
-                  <option value="">Default voice</option>
-                  {EDGE_TTS_ENABLED && <optgroup label="Edge voices">{EDGE_VOICES[s.lang].map((v) => <option key={v.name} value={v.name}>{v.label}</option>)}</optgroup>}
+                  <option value="">The Host (default)</option>
+                  {EDGE_TTS_ENABLED && <optgroup label="The Host · natural voices">{EDGE_VOICES[s.lang].map((v) => <option key={v.name} value={v.name}>{v.label}</option>)}</optgroup>}
                   {local.length > 0 && <optgroup label="On this device (reliable)">{sortV(local).map((v) => <option key={v.name} value={v.name}>{label(v)}</option>)}</optgroup>}
                   {online.length > 0 && <optgroup label="Online (natural, needs internet)">{sortV(online).map((v) => <option key={v.name} value={v.name}>{label(v)}</option>)}</optgroup>}
                 </select>
