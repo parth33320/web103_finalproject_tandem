@@ -3,6 +3,9 @@ import { io, type Socket } from "socket.io-client";
 import { WORDS, type Word } from "./words";
 import type { HintKind } from "./hints";
 import { setFor, type Direction, type OptionSet } from "./content";
+import { API_URL, hasServer } from "./config";
+import { getToken } from "./api";
+import { toast } from "sonner";
 
 export const ROUND_SECONDS = 20;
 export const REVEAL_SECONDS = 4;
@@ -10,7 +13,7 @@ export const REVEAL_SECONDS = 4;
 export const TOTAL_ROUNDS = 10;
 
 export type Role = "player" | "spectator";
-export type Player = { id: string; name: string; dir?: Direction; role: Role; score: number; choice: number | null; hints?: HintKind[]; hintsTotal?: number; online?: boolean };
+export type Player = { id: string; name: string; dir?: Direction; role: Role; score: number; choice: number | null; hints?: HintKind[]; hintsTotal?: number; online?: boolean; signedIn?: boolean };
 export type Chat = { id: string; name: string; text: string; channel?: "players" | "spectators" };
 export type Phase = "connecting" | "missing" | "waiting" | "question" | "reveal" | "final";
 export type RoomState = {
@@ -33,18 +36,26 @@ export type RoomState = {
   zh?: OptionSet | undefined;
   /** Words dealt this game, for the similarity meter. */
   seen?: Word[] | undefined;
+  /** Words this player got wrong (or ran out of time on) this game. */
+  missed?: Word[] | undefined;
+  /** A practice room deals the creator's trap words. */
+  practice?: boolean | undefined;
 };
 
-export const API_URL = ((import.meta.env["VITE_API_URL"] as string | undefined) || "").replace(/\/+$/, "");
-/** True when the website has been told where the Render game server is. */
-export const hasServer = !!API_URL;
+export { API_URL, hasServer };
 
 export const wordOf = (s: RoomState): Word => s.word ?? WORDS[0]!;
 
-/** Creates a room on the server (saved in Postgres) and returns its code. */
-export async function createRoom(): Promise<string> {
-  const r = await fetch(`${API_URL}/api/rooms`, { method: "POST" });
-  if (!r.ok) throw new Error(`Server error ${r.status}`);
+/** Creates a room on the server (saved in Postgres) and returns its code.
+ *  `practice` (signed in) deals the words you keep missing. */
+export async function createRoom({ practice = false } = {}): Promise<string> {
+  const token = getToken();
+  const r = await fetch(`${API_URL}/api/rooms`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...(token && { Authorization: `Bearer ${token}` }) },
+    body: JSON.stringify({ practice }),
+  });
+  if (!r.ok) throw new Error(((await r.json().catch(() => ({}))) as { error?: string }).error || `Server error ${r.status}`);
   return ((await r.json()) as { code: string }).code;
 }
 /** Looks a room up before joining. */
@@ -71,7 +82,8 @@ export function useRoom(code: string, me: Player) {
     if (!hasServer) return;
     const s = io(API_URL, { transports: ["websocket", "polling"] });
     sock.current = s;
-    const join = () => s.emit("room:join", { code, playerId: me.id, name: me.name, dir: me.dir });
+    const join = () => s.emit("room:join", { code, playerId: me.id, name: me.name, dir: me.dir, token: getToken() });
+    s.on("score:saved", ({ score }: { score: number }) => toast.success(`Score saved to the leaderboard: ${score} points`));
     s.on("connect", join);
     let tries = 0;
     s.on("room:missing", () => {
@@ -84,7 +96,14 @@ export function useRoom(code: string, me: Player) {
       const { content, correctZh, missing: _m, ...rest } = st;
       setState((prev) => {
         const seen = content && !(prev.seen ?? []).some((w) => w.id === content.word.id) ? [...(prev.seen ?? []), content.word] : prev.seen;
-        return { ...prev, ...rest, seen, word: content?.word, options: content?.options ?? [], drop: content?.drop, zh: content ? { ...content.zh, correct: correctZh ?? -1 } : undefined };
+        // At the reveal, remember the card if this player got it wrong (judged in their own direction).
+        let missed = prev.missed;
+        const mine = st.players.find((p) => p.id === me.id);
+        if (st.phase === "reveal" && content && mine?.role === "player" && !(missed ?? []).some((w) => w.id === content.word.id)) {
+          const right = (mine.dir ?? me.dir) === "ja2zh" ? correctZh : st.correct;
+          if (mine.choice !== right) missed = [...(missed ?? []), content.word];
+        }
+        return { ...prev, ...rest, seen, missed, word: content?.word, options: content?.options ?? [], drop: content?.drop, zh: content ? { ...content.zh, correct: correctZh ?? -1 } : undefined };
       });
     });
     s.on("chat:history", (list: Chat[]) => setState((prev) => ({ ...prev, chat: list })));

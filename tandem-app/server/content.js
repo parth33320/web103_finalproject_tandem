@@ -1,4 +1,5 @@
-// GENERATED from src/lib/content.ts + src/lib/words.ts + src/data/wordPool.js (bun build). Do not edit by hand.
+// GENERATED from src/lib/content.ts + src/lib/words.ts + src/data/wordPool.js (bun run build:server-content). Do not edit by hand.
+
 // src/data/wordPool.js
 var wordPool = [
   { id: 1, kanji: "手紙", jp_reading: "tegami", zh_pinyin: "shǒuzhǐ", meaning_en: "JP: letter; ZH: toilet paper", relation: "false_friend", fun_fact: "In ancient China, shouzhi referred to scrap paper for drafting notes, which later degraded to mean toilet paper, while Japan preserved the epistolary association." },
@@ -375,6 +376,63 @@ function toWord(p) {
   };
 }
 var WORDS = wordPool.map(toWord);
+var WORD_ROWS = WORDS.map((w) => ({
+  id: w.id,
+  form: w.form,
+  zh_form: w.zhForm,
+  reading: w.reading,
+  pinyin: w.pinyin,
+  meaning_ja: w.ja,
+  meaning_zh: w.zh,
+  relation: w.relation,
+  note: w.facts[0] ?? null
+}));
+function fromRow(r) {
+  return {
+    id: r.id,
+    form: r.form,
+    zhForm: r.zh_form || r.form,
+    reading: r.reading,
+    pinyin: r.pinyin,
+    ja: r.meaning_ja,
+    zh: r.meaning_zh,
+    relation: r.relation,
+    category: CATEGORY[r.relation],
+    example: `Japanese: ${r.reading} · Chinese: ${r.pinyin}`,
+    facts: [r.note || `${r.form} was added to the table by the Tandem community.`]
+  };
+}
+function validateWord(input, partial = false) {
+  const errors = {};
+  const CJK = /^[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}々〆ー]{1,8}$/u;
+  const LATIN = /^[\p{Script=Latin}\p{M}\s'’\-·.]{1,40}$/u;
+  const check = (key, ok, msg, optional = false) => {
+    const v = input[key];
+    if (v === undefined || v === null || v === "") {
+      if (!partial && !optional)
+        errors[key] = "Required.";
+      return;
+    }
+    if (typeof v !== "string" || !ok(v.trim()))
+      errors[key] = msg;
+  };
+  check("form", (v) => CJK.test(v), "Use 1–8 Chinese characters or kana, e.g. 手紙.");
+  check("zh_form", (v) => /^\p{Script=Han}{1,8}$/u.test(v), "Use 1–8 Chinese characters, e.g. 汽车.", true);
+  check("reading", (v) => LATIN.test(v), "Write the Japanese reading in romaji, e.g. tegami.");
+  check("pinyin", (v) => LATIN.test(v), "Write the pinyin, e.g. shǒuzhǐ.");
+  check("meaning_ja", (v) => v.length >= 2 && v.length <= 60, "2–60 characters.");
+  check("meaning_zh", (v) => v.length >= 2 && v.length <= 60, "2–60 characters.");
+  check("relation", (v) => ["true", "false", "partial"].includes(v), "Pick true, false or half friend.");
+  check("note", (v) => v.length <= 280, "Keep the fun fact under 280 characters.", true);
+  const ja = String(input["meaning_ja"] ?? "").trim().toLowerCase(), zh = String(input["meaning_zh"] ?? "").trim().toLowerCase();
+  if (!errors["meaning_ja"] && !errors["meaning_zh"] && ja && zh) {
+    if (input["relation"] === "true" && ja !== zh)
+      errors["meaning_zh"] = "True friends mean the same thing: use the same meaning in both.";
+    if (input["relation"] === "false" && ja === zh)
+      errors["meaning_zh"] = "False friends need different meanings in each language.";
+  }
+  return errors;
+}
 function hash(s) {
   let h = 2166136261;
   for (let i = 0;i < s.length; i++)
@@ -406,12 +464,14 @@ function optionSet(answer, trap, pool, n, salt) {
   options.splice(correct, 0, answer);
   return { options, correct, drop: pickDrop(correct, hash(`${n}-${salt}-e`)) };
 }
-function dealRound(n, avoid = []) {
-  let idx = n % WORDS.length;
-  for (let t = 0;t < WORDS.length && avoid.includes(WORDS[idx].id); t++)
-    idx = (idx + 1) % WORDS.length;
-  const w = WORDS[idx];
-  const others = WORDS.filter((x) => x.id !== w.id);
+function dealRound(n, avoid = [], pool = WORDS) {
+  let idx = n % pool.length;
+  for (let t = 0;t < pool.length && avoid.includes(pool[idx].id); t++)
+    idx = (idx + 1) % pool.length;
+  return dealWord(pool[idx], pool, n);
+}
+function dealWord(w, pool, n) {
+  const others = pool.filter((x) => x.id !== w.id);
   const trapJa = w.relation === "true" ? null : w.zh;
   const trapZh = w.relation === "true" ? null : w.ja;
   const ja = optionSet(w.ja, trapJa, others.map((x) => x.ja), n, "ja");
@@ -426,8 +486,13 @@ function similarity(seen) {
   return { total: seen.length, same, partial: counts["partial"] ?? 0, different: counts["false"] ?? 0, pct: seen.length ? Math.round(same / seen.length * 100) : 0 };
 }
 export {
+  WORDS,
+  WORD_ROWS,
   dealRound,
+  dealWord,
+  fromRow,
   optionSet,
   setFor,
-  similarity
+  similarity,
+  validateWord
 };

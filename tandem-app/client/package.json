@@ -12,7 +12,8 @@
     "format": "prettier --write .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "start": "node .output/server/index.mjs"
+    "start": "node .output/server/index.mjs",
+    "build:server-content": "bun build src/lib/content.ts --target=node --outfile ../server/content.js --banner \"// GENERATED from src/lib/content.ts + src/lib/words.ts + src/data/wordPool.js (bun run build:server-content). Do not edit by hand.\""
   },
   "overrides": {
     "rolldown": "1.2.1"

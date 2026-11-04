@@ -17,3 +17,9 @@ export function eliminated(code: string, round: number, correct: number): number
   const keep = wrong[hash(`${code}-${round}-elim`) % wrong.length]!;
   return wrong.filter((i) => i !== keep);
 }
+
+export const HINT_LABEL: Record<HintKind, { icon: string; title: string; what: string }> = {
+  eliminate: { icon: "✂", title: "Eliminate", what: "removes two wrong answers" },
+  example: { icon: "文", title: "Reading", what: "shows how the word is pronounced in both languages" },
+  category: { icon: "◈", title: "Category", what: "tells you if it's a true, false or half friend" },
+};

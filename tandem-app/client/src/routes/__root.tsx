@@ -12,6 +12,8 @@ import { type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { SettingsProvider } from "../lib/settings";
+import { AuthProvider } from "../lib/auth";
+import { Toaster } from "../components/ui/sonner";
 
 function NotFoundComponent() {
   return (
@@ -95,7 +97,10 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <SettingsProvider>
-        <Outlet />
+        <AuthProvider>
+          <Outlet />
+          <Toaster position="top-center" richColors closeButton />
+        </AuthProvider>
       </SettingsProvider>
     </QueryClientProvider>
   );

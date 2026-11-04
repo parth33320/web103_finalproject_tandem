@@ -10,11 +10,50 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AdminRouteImport } from './routes/admin'
+import { Route as HowToPlayRouteImport } from './routes/how-to-play'
+import { Route as LeaderboardRouteImport } from './routes/leaderboard'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as MeRouteImport } from './routes/me'
+import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as RoomCodeRouteImport } from './routes/room.$code'
+import { Route as WordsIndexRouteImport } from './routes/words.index'
+import { Route as WordsIdRouteImport } from './routes/words.$id'
+import { Route as WordsNewRouteImport } from './routes/words.new'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HowToPlayRoute = HowToPlayRouteImport.update({
+  id: '/how-to-play',
+  path: '/how-to-play',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LeaderboardRoute = LeaderboardRouteImport.update({
+  id: '/leaderboard',
+  path: '/leaderboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MeRoute = MeRouteImport.update({
+  id: '/me',
+  path: '/me',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthCallbackRoute = AuthCallbackRouteImport.update({
+  id: '/auth/callback',
+  path: '/auth/callback',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RoomCodeRoute = RoomCodeRouteImport.update({
@@ -22,31 +61,116 @@ const RoomCodeRoute = RoomCodeRouteImport.update({
   path: '/room/$code',
   getParentRoute: () => rootRouteImport,
 } as any)
+const WordsIndexRoute = WordsIndexRouteImport.update({
+  id: '/words/',
+  path: '/words/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WordsIdRoute = WordsIdRouteImport.update({
+  id: '/words/$id',
+  path: '/words/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WordsNewRoute = WordsNewRouteImport.update({
+  id: '/words/new',
+  path: '/words/new',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRoute
+  '/how-to-play': typeof HowToPlayRoute
+  '/leaderboard': typeof LeaderboardRoute
+  '/login': typeof LoginRoute
+  '/me': typeof MeRoute
+  '/auth/callback': typeof AuthCallbackRoute
   '/room/$code': typeof RoomCodeRoute
+  '/words/$id': typeof WordsIdRoute
+  '/words/new': typeof WordsNewRoute
+  '/words/': typeof WordsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRoute
+  '/how-to-play': typeof HowToPlayRoute
+  '/leaderboard': typeof LeaderboardRoute
+  '/login': typeof LoginRoute
+  '/me': typeof MeRoute
+  '/auth/callback': typeof AuthCallbackRoute
   '/room/$code': typeof RoomCodeRoute
+  '/words/$id': typeof WordsIdRoute
+  '/words/new': typeof WordsNewRoute
+  '/words': typeof WordsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/admin': typeof AdminRoute
+  '/how-to-play': typeof HowToPlayRoute
+  '/leaderboard': typeof LeaderboardRoute
+  '/login': typeof LoginRoute
+  '/me': typeof MeRoute
+  '/auth/callback': typeof AuthCallbackRoute
   '/room/$code': typeof RoomCodeRoute
+  '/words/$id': typeof WordsIdRoute
+  '/words/new': typeof WordsNewRoute
+  '/words/': typeof WordsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/room/$code'
+  fullPaths:
+    | '/'
+    | '/admin'
+    | '/how-to-play'
+    | '/leaderboard'
+    | '/login'
+    | '/me'
+    | '/auth/callback'
+    | '/room/$code'
+    | '/words/$id'
+    | '/words/new'
+    | '/words/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/room/$code'
-  id: '__root__' | '/' | '/room/$code'
+  to:
+    | '/'
+    | '/admin'
+    | '/how-to-play'
+    | '/leaderboard'
+    | '/login'
+    | '/me'
+    | '/auth/callback'
+    | '/room/$code'
+    | '/words/$id'
+    | '/words/new'
+    | '/words'
+  id:
+    | '__root__'
+    | '/'
+    | '/admin'
+    | '/how-to-play'
+    | '/leaderboard'
+    | '/login'
+    | '/me'
+    | '/auth/callback'
+    | '/room/$code'
+    | '/words/$id'
+    | '/words/new'
+    | '/words/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AdminRoute: typeof AdminRoute
+  HowToPlayRoute: typeof HowToPlayRoute
+  LeaderboardRoute: typeof LeaderboardRoute
+  LoginRoute: typeof LoginRoute
+  MeRoute: typeof MeRoute
+  AuthCallbackRoute: typeof AuthCallbackRoute
   RoomCodeRoute: typeof RoomCodeRoute
+  WordsIdRoute: typeof WordsIdRoute
+  WordsNewRoute: typeof WordsNewRoute
+  WordsIndexRoute: typeof WordsIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -58,6 +182,48 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/how-to-play': {
+      id: '/how-to-play'
+      path: '/how-to-play'
+      fullPath: '/how-to-play'
+      preLoaderRoute: typeof HowToPlayRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/leaderboard': {
+      id: '/leaderboard'
+      path: '/leaderboard'
+      fullPath: '/leaderboard'
+      preLoaderRoute: typeof LeaderboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/me': {
+      id: '/me'
+      path: '/me'
+      fullPath: '/me'
+      preLoaderRoute: typeof MeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth/callback': {
+      id: '/auth/callback'
+      path: '/auth/callback'
+      fullPath: '/auth/callback'
+      preLoaderRoute: typeof AuthCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/room/$code': {
       id: '/room/$code'
       path: '/room/$code'
@@ -65,12 +231,42 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RoomCodeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/words/': {
+      id: '/words/'
+      path: '/words'
+      fullPath: '/words/'
+      preLoaderRoute: typeof WordsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/words/$id': {
+      id: '/words/$id'
+      path: '/words/$id'
+      fullPath: '/words/$id'
+      preLoaderRoute: typeof WordsIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/words/new': {
+      id: '/words/new'
+      path: '/words/new'
+      fullPath: '/words/new'
+      preLoaderRoute: typeof WordsNewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AdminRoute: AdminRoute,
+  HowToPlayRoute: HowToPlayRoute,
+  LeaderboardRoute: LeaderboardRoute,
+  LoginRoute: LoginRoute,
+  MeRoute: MeRoute,
+  AuthCallbackRoute: AuthCallbackRoute,
   RoomCodeRoute: RoomCodeRoute,
+  WordsIdRoute: WordsIdRoute,
+  WordsNewRoute: WordsNewRoute,
+  WordsIndexRoute: WordsIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

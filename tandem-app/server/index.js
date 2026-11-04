@@ -1,24 +1,33 @@
+import './env.js'; // must stay first: loads .env before db.js and auth.js read process.env
 import express from 'express';
 import cors from 'cors';
 import { createServer } from 'node:http';
-import pg from 'pg';
+import { db, migrate } from './db.js';
+import { attachAuth } from './auth.js';
+import { createApi, errorHandler } from './api.js';
 import { attachRooms } from './rooms.js';
 import { attachSpeech } from './speech.js';
 
-const origins = (process.env.CLIENT_ORIGIN || '').split(',').map((s) => s.trim()).filter(Boolean);
-const pool = process.env.DATABASE_URL ? new pg.Pool({ connectionString: process.env.DATABASE_URL, ssl: process.env.DATABASE_URL.includes('render.com') ? { rejectUnauthorized: false } : undefined }) : null;
-const db = { query: (...a) => (pool ? pool.query(...a) : Promise.resolve({ rows: [] })) };
+const PORT = process.env.PORT || 3001;
+const origins = (process.env.CLIENT_ORIGIN || '').split(',').map((s) => s.trim().replace(/\/+$/, '')).filter(Boolean);
+// Where GitHub sends players back to: the website (first CLIENT_ORIGIN) and this server (Render sets RENDER_EXTERNAL_URL).
+const clientUrl = origins[0] || 'http://localhost:5173';
+const serverUrl = (process.env.SERVER_URL || process.env.RENDER_EXTERNAL_URL || `http://localhost:${PORT}`).replace(/\/+$/, '');
 
-await db.query(`CREATE TABLE IF NOT EXISTS rooms (code VARCHAR(8) PRIMARY KEY, phase TEXT NOT NULL DEFAULT 'waiting', round INTEGER NOT NULL DEFAULT 0, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
-CREATE TABLE IF NOT EXISTS room_messages (id SERIAL PRIMARY KEY, room_code VARCHAR(8), channel TEXT NOT NULL, name TEXT NOT NULL, text VARCHAR(300) NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());`).catch((e) => console.error('DB setup failed:', e.message));
+await migrate().catch((e) => console.error('DB setup failed:', e.message));
 
 const app = express();
 app.set('trust proxy', 1); // Render puts exactly one proxy in front of the service.
+app.disable('x-powered-by');
 app.use(cors({ origin: origins.length ? origins : '*' }));
 app.use(express.json({ limit: '8kb' }));
 app.get('/health', (_req, res) => res.json({ ok: true }));
+attachAuth(app, { clientUrl, serverUrl });
 attachSpeech(app, { allowedOrigins: origins });
 
 const server = createServer(app);
 attachRooms(app, server, origins.length ? origins : '*', db);
-server.listen(process.env.PORT || 3001, () => console.log('Tandem server ready'));
+app.use('/api', createApi());
+app.use('/api', (_req, res) => res.status(404).json({ error: 'API route not found.' }));
+app.use(errorHandler);
+server.listen(PORT, () => console.log(`Tandem server ready on ${serverUrl}`));

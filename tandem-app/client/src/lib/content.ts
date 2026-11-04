@@ -1,6 +1,8 @@
 // Round content built from the word pool (src/data/wordPool.js).
 // The Render server bundles this same file as render-server/content.js — regenerate after edits.
 import { WORDS, hash, type Word } from "./words";
+// The server also needs these (seeding the words table, dealing community words, validating new words).
+export { WORDS, WORD_ROWS, fromRow, validateWord } from "./words";
 
 export type OptionSet = { options: string[]; correct: number; drop: number[] };
 /** Top-level options = Japanese meaning (Chinese speakers guessing Japanese, and English mode).
@@ -35,12 +37,16 @@ export function optionSet(answer: string, trap: string | null, pool: string[], n
   return { options, correct, drop: pickDrop(correct, hash(`${n}-${salt}-e`)) };
 }
 
-/** One card from the pool, skipping word ids already dealt this game (`avoid`). */
-export function dealRound(n: number, avoid: number[] = []): RoundContent {
-  let idx = n % WORDS.length;
-  for (let t = 0; t < WORDS.length && avoid.includes(WORDS[idx]!.id); t++) idx = (idx + 1) % WORDS.length;
-  const w = WORDS[idx]!;
-  const others = WORDS.filter((x) => x.id !== w.id);
+/** One card from the pool (built-in words by default), skipping word ids already dealt this game (`avoid`). */
+export function dealRound(n: number, avoid: number[] = [], pool: Word[] = WORDS): RoundContent {
+  let idx = n % pool.length;
+  for (let t = 0; t < pool.length && avoid.includes(pool[idx]!.id); t++) idx = (idx + 1) % pool.length;
+  return dealWord(pool[idx]!, pool, n);
+}
+
+/** The card for one chosen word; wrong choices come from the other words in `pool`. */
+export function dealWord(w: Word, pool: Word[], n: number): RoundContent {
+  const others = pool.filter((x) => x.id !== w.id);
   const trapJa = w.relation === "true" ? null : w.zh;
   const trapZh = w.relation === "true" ? null : w.ja;
   const ja = optionSet(w.ja, trapJa, others.map((x) => x.ja), n, "ja");

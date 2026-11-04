@@ -1,4 +1,10 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { toast } from "sonner";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { HowToPlay } from "@/components/HowToPlay";
+import { SettingsSheet } from "@/components/SettingsSheet";
+import { Spinner } from "@/components/Spinner";
+import { useAuth } from "@/lib/auth";
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { HandPointer } from "@/components/HandPointer";
@@ -7,11 +13,12 @@ import { PageCard } from "@/components/PageCard";
 import { Deck } from "@/components/Deck";
 import { LINES, speak } from "@/lib/host";
 import { useSettings } from "@/lib/settings";
-import { useRoom, wordOf, TOTAL_ROUNDS, type RoomState } from "@/lib/room";
+import { createRoom, useRoom, wordOf, TOTAL_ROUNDS, type RoomState } from "@/lib/room";
+import type { Word } from "@/lib/words";
 import { playCorrect, playSwoosh, playTick, playWrong, setSfxMuted } from "@/utils/soundEffects.js";
 import { RELATION_LABEL, personalFact } from "@/lib/words";
 import { similarity } from "@/lib/content";
-import { HINT_COST, HINT_ORDER, eliminated, pointsFor, type HintKind } from "@/lib/hints";
+import { HINT_COST, HINT_LABEL, HINT_ORDER, eliminated, pointsFor, type HintKind } from "@/lib/hints";
 import table from "@/assets/table-felt.jpg";
 
 export const Route = createFileRoute("/room/$code")({
@@ -74,13 +81,16 @@ function RoomPage() {
         <div className="flex min-w-0 flex-wrap items-center gap-2 text-xs sm:gap-3 sm:text-sm">
           <span className="rounded-full bg-success px-3 py-1.5 text-background">● Live room</span>
           <span className="glass rounded-full px-3 py-1.5 tracking-widest sm:px-4">ROOM {code}</span>
+          {state.practice && <span className="rounded-full bg-primary/20 px-3 py-1.5 text-primary">🎴 Practice: your trap words</span>}
           {isSpectator && <span className="rounded-full bg-accent px-3 py-1.5 text-accent-foreground">Watching</span>}
-          <button onClick={() => set({ muted: !s.muted })} className="glass rounded-full px-3 py-1.5">{s.muted ? "🔇 Sound off" : "🔊 Sound on"}</button>
+          <RulesButton />
+          <button onClick={() => set({ muted: !s.muted })} className="glass rounded-full px-3 py-1.5" aria-label={s.muted ? "Turn sound on" : "Turn sound off"}>{s.muted ? "🔇" : "🔊"}</button>
+          <SettingsSheet />
         </div>
       </header>
 
       <div className="relative z-10">
-        {state.phase === "connecting" && <Notice title="Waking up the game server…" body="Free servers can take up to a minute to wake up." />}
+        {state.phase === "connecting" && <Notice title="Waking up the game server…" body="Free servers can take up to a minute to wake up." spinner />}
         {state.phase === "missing" && <Notice title="Room not found" body="Check the code with your friend, or create a new room." link />}
         {state.phase === "waiting" && <Waiting state={state} onStart={start} isCreator={state.creatorId === me.id} />}
         {(state.phase === "question" || state.phase === "reveal") &&
@@ -208,10 +218,12 @@ function PlayerChat({ chat, onSend }: { chat: RoomState["chat"]; onSend: (t: str
 }
 
 function Waiting({ state, onStart, isCreator }: { state: RoomState; onStart: () => void; isCreator: boolean }) {
+  const [sent, setSent] = useState(false); // one click deals; the button stays off until the cards arrive
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mx-auto mt-16 max-w-xl text-center">
       <h2 className="text-5xl font-bold">The table is set</h2>
       <p className="mt-3 text-muted-foreground">Share code <b className="tracking-widest text-primary">{state.code}</b> so friends can join.</p>
+      <CopyLink code={state.code} />
       <div className="glass mx-auto mt-8 grid grid-cols-2 gap-3 rounded-2xl p-6">
         {state.players.map((p, i) => (
           <motion.div key={p.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.15 }}
@@ -219,8 +231,8 @@ function Waiting({ state, onStart, isCreator }: { state: RoomState; onStart: () 
         ))}
       </div>
       {isCreator ? (
-        <button onClick={onStart} className="mt-8 rounded-xl bg-primary px-10 py-4 text-lg font-bold text-primary-foreground hover:brightness-110">
-          Deal the cards for everyone
+        <button onClick={() => { setSent(true); onStart(); }} disabled={sent} className="mt-8 rounded-xl bg-primary px-10 py-4 text-lg font-bold text-primary-foreground hover:brightness-110 disabled:opacity-60">
+          {sent ? <Spinner label="Shuffling the deck…" /> : "Deal the cards for everyone"}
         </button>
       ) : (
         <p className="mt-8 animate-pulse text-lg text-muted-foreground">Waiting for the room creator to deal the cards…</p>
@@ -252,6 +264,7 @@ function WordFace({ state, meName }: { state: RoomState; meName: string }) {
       {reveal ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-3">
           <span className="rounded-full bg-accent px-3 py-1 text-xs font-bold uppercase tracking-widest text-accent-foreground">{RELATION_LABEL[w.relation]}</span>
+          {w.by && <span className="text-[10px] uppercase tracking-widest opacity-60">Community word by @{w.by}</span>}
           <div className="grid w-full grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-start gap-2">
             <div>
               <span className="block text-[10px] uppercase tracking-widest opacity-60">Japanese</span>
@@ -337,22 +350,19 @@ function PlayerView({ state, meId, meName, onChoose, onHint }: { state: RoomStat
   );
 }
 
-const HINT_LABEL: Record<HintKind, { icon: string; title: string }> = {
-  eliminate: { icon: "✂", title: "Eliminate" },
-  example: { icon: "文", title: "Reading" },
-  category: { icon: "◈", title: "Category" },
-};
 
 function NextBar({ state, meId, onNext }: { state: RoomState; meId: string; onNext: () => void }) {
   const isCreator = state.creatorId === meId;
   const creator = state.players.find((p) => p.id === state.creatorId)?.name ?? "the room creator";
   const last = state.round >= TOTAL_ROUNDS;
+  const [sentFor, setSentFor] = useState(0); // the round we already asked to advance from
+  const sent = sentFor === state.round;
   return (
     <div className="relative z-20 mx-auto mb-40 flex max-w-xl justify-center px-4 lg:mb-10">
       {isCreator ? (
-        <motion.button initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.2 }} onClick={onNext}
-          className="rounded-xl bg-primary px-10 py-4 text-lg font-bold text-primary-foreground shadow-lg hover:brightness-110">
-          {last ? "See the results" : "Next card →"}
+        <motion.button initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.2 }} onClick={() => { setSentFor(state.round); onNext(); }} disabled={sent}
+          className="rounded-xl bg-primary px-10 py-4 text-lg font-bold text-primary-foreground shadow-lg hover:brightness-110 disabled:opacity-60">
+          {sent ? "Dealing…" : last ? "See the results" : "Next card →"}
         </motion.button>
       ) : (
         <p className="glass animate-pulse rounded-xl px-5 py-3 text-center text-muted-foreground">Waiting for {creator} to deal the next card…</p>
@@ -447,6 +457,7 @@ function Final({ state, meId }: { state: RoomState; meId: string }) {
       className="mx-auto mt-10 max-w-xl text-center">
       <h2 className={`text-7xl font-bold ${won ? "gold-text" : "text-foreground"}`}>{won ? "Victory" : "Defeat"}</h2>
       <SimilarityMeter seen={state.seen ?? []} />
+      <TrapWords missed={state.missed ?? []} />
       <ol className="glass mt-8 space-y-2 rounded-2xl p-6 text-left">
         {ranked.map((p, i) => (
           <motion.li key={p.id} initial={{ x: -30, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.3 + i * 0.15 }}
@@ -480,9 +491,10 @@ function SimilarityMeter({ seen }: { seen: { kind?: string; relation: string }[]
   );
 }
 
-function Notice({ title, body, link }: { title: string; body: string; link?: boolean }) {
+function Notice({ title, body, link, spinner }: { title: string; body: string; link?: boolean; spinner?: boolean }) {
   return (
     <div className="glass mx-auto mt-20 max-w-md rounded-3xl p-8 text-center">
+      {spinner && <div className="mb-4 flex justify-center"><Spinner label="Connecting…" /></div>}
       <h2 className="text-3xl font-bold">{title}</h2>
       <p className="mt-3 text-muted-foreground">{body}</p>
       {link && <Link to="/" className="mt-6 inline-block rounded-xl bg-primary px-6 py-3 font-bold text-primary-foreground">Back to the lobby</Link>}
@@ -510,4 +522,66 @@ function useSoundEffects(state: RoomState, meId: string) {
     }, 100);
     return () => clearInterval(id);
   }, [state.phase, state.round, state.deadline]);
+}
+
+/** "How to play" pop-up, so nobody has to leave the table to read the rules. */
+function RulesButton() {
+  return (
+    <Dialog>
+      <DialogTrigger className="glass rounded-full px-3 py-1.5">❔ How to play</DialogTrigger>
+      <DialogContent className="max-h-[85vh] max-w-2xl overflow-y-auto">
+        <DialogHeader><DialogTitle className="font-display text-3xl">How to play</DialogTitle></DialogHeader>
+        <HowToPlay compact />
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function CopyLink({ code }: { code: string }) {
+  const copy = async () => {
+    const url = `${window.location.origin}/room/${code}`;
+    try { await navigator.clipboard.writeText(url); toast.success("Invite link copied. Send it to your friends!"); }
+    catch { toast(`Share this link: ${url}`); }
+  };
+  return <button onClick={copy} className="mt-3 rounded-full border border-input px-4 py-1.5 text-sm hover:bg-secondary">🔗 Copy invite link</button>;
+}
+
+/** The words that tricked this player in this game; signed-in players can practice them. */
+function TrapWords({ missed }: { missed: Word[] }) {
+  const { me, signIn } = useAuth();
+  const nav = useNavigate();
+  const [busy, setBusy] = useState(false);
+  if (!missed.length) return <p className="glass mx-auto mt-6 rounded-2xl p-5">🎯 Not a single trap caught you. Impressive!</p>;
+  const practice = async () => {
+    setBusy(true);
+    try { const code = await createRoom({ practice: true }); await nav({ to: "/room/$code", params: { code } }); }
+    catch (e) { toast.error((e as Error).message); setBusy(false); }
+  };
+  return (
+    <div className="glass mx-auto mt-6 rounded-2xl p-5 text-left">
+      <h3 className="text-xs uppercase tracking-[0.25em] text-muted-foreground">Words that tricked you</h3>
+      <ul className="mt-3 space-y-2">
+        {missed.map((w) => (
+          <li key={w.id} className="flex items-baseline gap-3">
+            <span className="font-['Noto_Serif_JP'] text-2xl font-semibold">{w.form}</span>
+            <span className="min-w-0 text-sm"><b>JP</b> {w.ja} · <b>ZH</b> {w.zh}</span>
+          </li>
+        ))}
+      </ul>
+      <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-border/50 pt-4 text-sm">
+        {me ? (
+          <>
+            <span className="text-muted-foreground">Saved to your trap list.</span>
+            <button onClick={practice} disabled={busy} className="rounded-lg bg-primary px-4 py-2 font-semibold text-primary-foreground disabled:opacity-50">{busy ? "Dealing…" : "🎴 Practice my traps"}</button>
+            <Link to="/me" className="underline">See all</Link>
+          </>
+        ) : (
+          <>
+            <span className="text-muted-foreground">Sign in to save these and practice them later.</span>
+            <button onClick={() => signIn("/me")} className="rounded-lg border border-primary px-4 py-2 font-semibold text-primary">Sign in with GitHub</button>
+          </>
+        )}
+      </div>
+    </div>
+  );
 }

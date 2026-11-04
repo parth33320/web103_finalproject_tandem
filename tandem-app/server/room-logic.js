@@ -22,4 +22,9 @@ export function nextCreator(r) { return [...r.players.values()].find((p) => p.so
 export function activePlayers(r) { return [...r.players.values()].filter((p) => p.socketId && p.role === 'player'); }
 /** True when every connected player has answered (and at least one is still here); people who left aren't waited for. */
 export function everyoneAnswered(r) { const a = activePlayers(r); return a.length > 0 && a.every((p) => p.choice !== null); }
+/** Which rounds feature community words: up to 2, never round 1 (the first card is always a classic), all different. */
+export function featuredRounds(count, total, rand = Math.random) {
+  const rounds = Array.from({ length: total - 1 }, (_, i) => i + 2).sort(() => rand() - 0.5);
+  return rounds.slice(0, Math.min(2, count)).sort((a, b) => a - b);
+}
 export function allRead(r) { return [...r.players.values()].filter((p) => p.socketId && p.role === 'player').every((p) => r.done?.has(p.id)); }
