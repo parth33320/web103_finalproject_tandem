@@ -72,6 +72,8 @@ CREATE TABLE IF NOT EXISTS player_missed_words (
   last_missed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   PRIMARY KEY (player_id, word_id)
 );
+-- Right answers in a row in practice games; at 2 the word is mastered and leaves the list.
+ALTER TABLE player_missed_words ADD COLUMN IF NOT EXISTS correct_streak INTEGER NOT NULL DEFAULT 0 CHECK (correct_streak >= 0);
 -- Many-to-many: players <-> community words they voted on (+1 / -1).
 CREATE TABLE IF NOT EXISTS word_votes (
   player_id INTEGER NOT NULL REFERENCES players(id) ON DELETE CASCADE,

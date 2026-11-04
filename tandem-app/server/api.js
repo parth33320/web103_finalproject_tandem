@@ -168,7 +168,7 @@ export function createApi() {
     const limit = Math.max(1, Math.min(100, Number.parseInt(req.query.limit, 10) || 50));
     const { rows } = await db.query(
       `SELECT w.id, w.form, w.zh_form, w.reading, w.pinyin, w.meaning_ja, w.meaning_zh, w.relation, w.note, w.source,
-              m.miss_count, m.last_missed_at
+              m.miss_count, m.correct_streak, m.last_missed_at
        FROM player_missed_words m JOIN words w ON w.id = m.word_id
        WHERE m.player_id = $1 ORDER BY m.miss_count DESC, m.last_missed_at DESC LIMIT $2`, [req.player.id, limit]);
     res.json(rows);

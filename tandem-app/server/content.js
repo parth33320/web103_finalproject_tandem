@@ -478,6 +478,10 @@ function dealWord(w, pool, n) {
   const zh = optionSet(w.zh, trapZh, others.map((x) => x.zh), n, "zh");
   return { word: { ...w, kind: "falseFriend" }, ...ja, zh };
 }
+function similaritySentence(m) {
+  const kind = (n, one, many) => n === 1 ? `1 was ${one}` : `${n} were ${many}`;
+  return `Of the ${m.total} word${m.total === 1 ? "" : "s"} you saw, ${m.same} meant the same in Chinese and Japanese, ` + `${kind(m.partial, "a half friend", "half friends")} and ${kind(m.different, "a false friend", "false friends")}.`;
+}
 function similarity(seen) {
   const counts = { true: 0, partial: 0, false: 0 };
   for (const w of seen)
@@ -494,5 +498,6 @@ export {
   optionSet,
   setFor,
   similarity,
+  similaritySentence,
   validateWord
 };

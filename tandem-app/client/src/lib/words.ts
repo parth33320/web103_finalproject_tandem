@@ -23,6 +23,8 @@ export type Word = {
   facts: string[];
   /** GitHub username of the player who added a community word. */
   by?: string;
+  /** In a practice game: this card is one of the room creator's trap words (the rest are "neighbors"). */
+  trap?: boolean;
 };
 
 const REL: Record<PoolWord["relation"], Relation> = { true_friend: "true", false_friend: "false", half_friend: "partial" };

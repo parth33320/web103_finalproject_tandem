@@ -1,9 +1,52 @@
 import { describe, expect, it } from "vitest";
-import { dealRound, dealWord, setFor } from "@/lib/content";
-import { WORDS, WORD_ROWS, fromRow, toWord, validateWord } from "@/lib/words";
+import { dealRound, dealWord, setFor, similarity, similaritySentence } from "@/lib/content";
+import { WORDS, WORD_ROWS, fromRow, toWord, validateWord, type Word } from "@/lib/words";
+import { MASTER_AFTER as CLIENT_MASTER_AFTER } from "@/lib/api";
 import { wordPool } from "@/data/wordPool.js";
 // @ts-expect-error plain JS server module
-import { featuredRounds } from "../../../server/room-logic.js";
+import { featuredRounds, practiceDeck, MASTER_AFTER } from "../../../server/room-logic.js";
+
+describe("practice games", () => {
+  const byForm = (f: string) => WORDS.find((w) => w.form === f)!;
+  const traps = ["手紙", "切手", "部屋"].map(byForm);
+
+  it("deals every trap word once, fills the game to 10 and marks only traps", () => {
+    const deck: Word[] = practiceDeck(traps, WORDS, 10);
+    expect(deck).toHaveLength(10);
+    expect(new Set(deck.map((w) => w.id)).size).toBe(10);
+    expect(deck.filter((w) => w.trap).map((w) => w.form).sort()).toEqual(["切手", "手紙", "部屋"].sort());
+  });
+  it("fills with neighbors: the same kind of word as the traps", () => {
+    const kinds = new Set(traps.map((w) => w.relation));
+    const deck: Word[] = practiceDeck(traps, WORDS, 10);
+    expect(deck.filter((w) => !w.trap).every((w) => kinds.has(w.relation))).toBe(true);
+  });
+  it("prefers neighbors that share a character with a trap word", () => {
+    const one = [byForm("手紙")];
+    const deck: Word[] = practiceDeck(one, WORDS, 10, () => 0.5);
+    const sharing = WORDS.filter((w) => w.id !== one[0]!.id && w.relation === one[0]!.relation && [...w.form].some((c) => "手紙".includes(c)));
+    const fill = deck.filter((w) => !w.trap);
+    // Every same-kind word that shares a character is dealt before any that doesn't (up to the 9 free cards).
+    expect(fill.filter((w) => sharing.some((s) => s.id === w.id)).length).toBe(Math.min(9, sharing.length));
+  });
+  it("with 10+ trap words, the game is only trap words", () => {
+    const many = WORDS.slice(0, 12);
+    expect((practiceDeck(many, WORDS, 10) as Word[]).every((w) => w.trap)).toBe(true);
+  });
+  it("client and server agree on how many right answers master a word", () => expect(CLIENT_MASTER_AFTER).toBe(MASTER_AFTER));
+});
+
+describe("similarity meter sentence", () => {
+  it("uses singular and plural correctly", () => {
+    expect(similaritySentence({ total: 10, same: 3, partial: 1, different: 6 }))
+      .toBe("Of the 10 words you saw, 3 meant the same in Chinese and Japanese, 1 was a half friend and 6 were false friends.");
+    expect(similaritySentence({ total: 10, same: 8, partial: 0, different: 1 }))
+      .toBe("Of the 10 words you saw, 8 meant the same in Chinese and Japanese, 0 were half friends and 1 was a false friend.");
+  });
+  it("matches what the meter counts", () => {
+    expect(similaritySentence(similarity(WORDS.slice(0, 10)))).toMatch(/^Of the 10 words you saw/);
+  });
+});
 
 const good = { form: "便宜", reading: "bengi", pinyin: "piányi", meaning_ja: "convenience", meaning_zh: "cheap", relation: "false" };
 

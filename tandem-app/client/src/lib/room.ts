@@ -40,6 +40,8 @@ export type RoomState = {
   missed?: Word[] | undefined;
   /** A practice room deals the creator's trap words. */
   practice?: boolean | undefined;
+  /** Trap words this player mastered during this practice game (off their list now). */
+  mastered?: string[] | undefined;
 };
 
 export { API_URL, hasServer };
@@ -84,6 +86,13 @@ export function useRoom(code: string, me: Player) {
     sock.current = s;
     const join = () => s.emit("room:join", { code, playerId: me.id, name: me.name, dir: me.dir, token: getToken() });
     s.on("score:saved", ({ score }: { score: number }) => toast.success(`Score saved to the leaderboard: ${score} points`));
+    // Practice games: each right answer on a trap word counts toward mastering it.
+    s.on("trap:progress", ({ form, streak, mastered, needed }: { form: string; streak: number; mastered: boolean; needed: number }) => {
+      if (mastered) {
+        toast.success(`${form} mastered! It's off your trap list. 🎉`);
+        setState((prev) => ({ ...prev, mastered: [...new Set([...(prev.mastered ?? []), form])] }));
+      } else toast(`${form}: ${needed - streak} more right answer${needed - streak === 1 ? "" : "s"} to master it.`);
+    });
     s.on("connect", join);
     let tries = 0;
     s.on("room:missing", () => {

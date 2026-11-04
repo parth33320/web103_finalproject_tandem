@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { BASE_POINTS, HINT_COST, HINT_LABEL, HINT_ORDER } from "@/lib/hints";
 import { ROUND_SECONDS, TOTAL_ROUNDS } from "@/lib/room";
-import { RELATION_STYLE } from "@/lib/api";
+import { MASTER_AFTER, RELATION_STYLE } from "@/lib/api";
 
 /** The rules, used on the /how-to-play page and in the in-game "How to play" pop-up. */
 export function HowToPlay({ compact = false }: { compact?: boolean }) {
@@ -54,7 +54,7 @@ export function HowToPlay({ compact = false }: { compact?: boolean }) {
       <Step n={7} title="Sign in for more (optional)">
         Guests can play everything. If you <b>sign in with GitHub</b>:
         <ul className="mt-2 list-disc space-y-1 pl-5">
-          <li>Words you get wrong go on your <b>trap list</b>, and you can play a practice game made only of your trap words.</li>
+          <li>Words you get wrong go on your <b>trap list</b>. A <b>practice game</b> deals your trap words mixed with similar words. Get a trap word right {MASTER_AFTER} times in a row there and it's mastered and leaves your list. Practice games don't count on the leaderboard.</li>
           <li>Your best games go on the <Link to="/leaderboard" className="text-primary underline">leaderboard</Link>, with a separate board for each direction.</li>
           <li>You can add your own false friends to the <Link to="/words" className="text-primary underline">community word pool</Link>. Once a word gets enough upvotes, it starts showing up in real games.</li>
         </ul>

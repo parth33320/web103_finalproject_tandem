@@ -27,4 +27,22 @@ export function featuredRounds(count, total, rand = Math.random) {
   const rounds = Array.from({ length: total - 1 }, (_, i) => i + 2).sort(() => rand() - 0.5);
   return rounds.slice(0, Math.min(2, count)).sort((a, b) => a - b);
 }
+/** Right answers in practice games, in a row, before a word leaves your trap list. */
+export const MASTER_AFTER = 2;
+
+/** A practice deck: every trap word (marked `trap: true`), then "neighbors" to fill the game. A neighbor is the
+ *  same kind of word (false / half / true friend) as a trap word, best of all one that shares a character with it
+ *  (手紙 -> 切手). The cards are shuffled so traps and neighbors are mixed. */
+export function practiceDeck(traps, pool, total, rand = Math.random) {
+  const deck = traps.slice(0, total).map((w) => ({ ...w, trap: true }));
+  const used = new Set(deck.map((w) => w.id));
+  const chars = new Set(deck.flatMap((w) => [...w.form]));
+  const relations = new Set(deck.map((w) => w.relation));
+  const score = (w) => (relations.has(w.relation) ? 2 : 0) + ([...w.form].some((c) => chars.has(c)) ? 1 : 0);
+  const fill = pool.filter((w) => !used.has(w.id)).map((w) => ({ w, s: score(w) + rand() })) // rand breaks ties
+    .sort((a, b) => b.s - a.s).slice(0, total - deck.length).map((x) => x.w);
+  const cards = [...deck, ...fill];
+  for (let i = cards.length - 1; i > 0; i--) { const j = Math.floor(rand() * (i + 1)); [cards[i], cards[j]] = [cards[j], cards[i]]; }
+  return cards;
+}
 export function allRead(r) { return [...r.players.values()].filter((p) => p.socketId && p.role === 'player').every((p) => r.done?.has(p.id)); }

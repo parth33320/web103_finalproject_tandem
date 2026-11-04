@@ -1,6 +1,6 @@
 // Live rooms for Tandem. Rooms run in memory while a game is on; rooms, answers, chat, scores and trap words are saved to Postgres.
 import { Server } from 'socket.io';
-import { HINT_COST, pointsFor, createRoom, canStart, chatChannel, canAdvance, nextCreator, allRead, everyoneAnswered, featuredRounds } from './room-logic.js';
+import { HINT_COST, pointsFor, createRoom, canStart, chatChannel, canAdvance, nextCreator, allRead, everyoneAnswered, featuredRounds, practiceDeck, MASTER_AFTER } from './room-logic.js';
 import { WORDS, dealRound, dealWord, fromRow } from './content.js';
 import { optionalAuth, verifyToken } from './auth.js';
 import { APPROVE_AT } from './api.js';
@@ -63,7 +63,8 @@ export function attachRooms(app, server, origin, db) {
       const { rows } = await db.query(
         `SELECT w.* FROM player_missed_words m JOIN words w ON w.id = m.word_id
          WHERE m.player_id = $1 ORDER BY m.miss_count DESC, m.last_missed_at DESC LIMIT $2`, [r.practiceFor, TOTAL]);
-      rows.map(fromRow).sort(() => Math.random() - 0.5).forEach((w, i) => r.queue.set(i + 1, w));
+      // Trap words plus "neighbors" (same kind of word, ideally sharing a character), shuffled together.
+      practiceDeck(rows.map(fromRow), r.pool, TOTAL).forEach((w, i) => r.queue.set(i + 1, w));
     } else {
       const picks = [...community].sort(() => Math.random() - 0.5);
       featuredRounds(picks.length, TOTAL).forEach((round, i) => r.queue.set(round, picks[i]));
@@ -107,12 +108,15 @@ export function attachRooms(app, server, origin, db) {
     for (const p of r.players.values()) {
       if (p.role !== 'player') continue;
       p.played = (p.played ?? 0) + 1;
-      if (p.choice === rightFor(r, p)) { p.score += pointsFor(p.hints); p.correct = (p.correct ?? 0) + 1; }
-      // A wrong answer (or no answer) automatically goes on a signed-in player's trap list.
+      if (p.choice === rightFor(r, p)) {
+        p.score += pointsFor(p.hints); p.correct = (p.correct ?? 0) + 1;
+        if (r.practiceFor && p.accountId && wordId) practiceRight(p, r.content.word);
+      }
+      // A wrong answer (or no answer) automatically goes on a signed-in player's trap list, and resets its streak.
       else if (p.accountId && wordId) {
         db.query(
           `INSERT INTO player_missed_words (player_id, word_id) VALUES ($1, $2)
-           ON CONFLICT (player_id, word_id) DO UPDATE SET miss_count = player_missed_words.miss_count + 1, last_missed_at = NOW()`,
+           ON CONFLICT (player_id, word_id) DO UPDATE SET miss_count = player_missed_words.miss_count + 1, correct_streak = 0, last_missed_at = NOW()`,
           [p.accountId, wordId]).catch((e) => console.error('Saving a trap word failed:', e.message));
       }
     }
@@ -127,8 +131,23 @@ export function attachRooms(app, server, origin, db) {
     } else startRound(r, r.round + 1, LEAD_MS);
   }
 
-  /** Signed-in players' games go on the leaderboard. */
+  /** In a practice game, a right answer on one of your trap words counts toward mastering it;
+   *  after MASTER_AFTER in a row it leaves your trap list. */
+  async function practiceRight(p, word) {
+    try {
+      const { rows } = await db.query(
+        'UPDATE player_missed_words SET correct_streak = correct_streak + 1 WHERE player_id = $1 AND word_id = $2 RETURNING correct_streak',
+        [p.accountId, word.id]);
+      if (!rows[0]) return; // not on this player's trap list
+      const mastered = rows[0].correct_streak >= MASTER_AFTER;
+      if (mastered) await db.query('DELETE FROM player_missed_words WHERE player_id = $1 AND word_id = $2', [p.accountId, word.id]);
+      if (p.socketId) io.to(p.socketId).emit('trap:progress', { wordId: word.id, form: word.form, streak: rows[0].correct_streak, mastered, needed: MASTER_AFTER });
+    } catch (e) { console.error('Saving practice progress failed:', e.message); }
+  }
+
+  /** Signed-in players' games go on the leaderboard. Practice games don't: they're made of your hardest words. */
   function saveScores(r) {
+    if (r.practiceFor) return;
     for (const p of r.players.values()) {
       if (!p.accountId || !p.played) continue;
       db.query('INSERT INTO scores (player_id, room_code, direction, score, correct, total) VALUES ($1, $2, $3, $4, $5, $6)',

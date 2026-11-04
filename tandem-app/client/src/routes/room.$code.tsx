@@ -17,7 +17,9 @@ import { createRoom, useRoom, wordOf, TOTAL_ROUNDS, type RoomState } from "@/lib
 import type { Word } from "@/lib/words";
 import { playCorrect, playSwoosh, playTick, playWrong, setSfxMuted } from "@/utils/soundEffects.js";
 import { RELATION_LABEL, personalFact } from "@/lib/words";
-import { similarity } from "@/lib/content";
+import { similarity, similaritySentence, type Direction } from "@/lib/content";
+import { SiteNav } from "@/components/PageShell";
+import { MASTER_AFTER } from "@/lib/api";
 import { HINT_COST, HINT_LABEL, HINT_ORDER, eliminated, pointsFor, type HintKind } from "@/lib/hints";
 import table from "@/assets/table-felt.jpg";
 
@@ -76,6 +78,8 @@ function RoomPage() {
       <img src={table} alt="" className="camera-push absolute inset-0 h-full w-full object-cover opacity-80" />
       <div className="absolute inset-0 bg-gradient-to-b from-background/30 via-transparent to-background/80" />
 
+      {/* The game is over: show the site menu again. During a game it stays hidden so nobody leaves by accident. */}
+      {state.phase === "final" ? <SiteNav /> : (
       <header className="relative z-10 flex flex-wrap items-center justify-between gap-2 px-4 py-4 sm:px-6">
         <Link to="/" className="font-display text-2xl font-bold gold-text">Tandem</Link>
         <div className="flex min-w-0 flex-wrap items-center gap-2 text-xs sm:gap-3 sm:text-sm">
@@ -88,6 +92,7 @@ function RoomPage() {
           <SettingsSheet />
         </div>
       </header>
+      )}
 
       <div className="relative z-10">
         {state.phase === "connecting" && <Notice title="Waking up the game server…" body="Free servers can take up to a minute to wake up." spinner />}
@@ -456,8 +461,9 @@ function Final({ state, meId }: { state: RoomState; meId: string }) {
     <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.8 }}
       className="mx-auto mt-10 max-w-xl text-center">
       <h2 className={`text-7xl font-bold ${won ? "gold-text" : "text-foreground"}`}>{won ? "Victory" : "Defeat"}</h2>
+      {state.practice && <PracticeSummary state={state} mine={state.creatorId === meId} />}
       <SimilarityMeter seen={state.seen ?? []} />
-      <TrapWords missed={state.missed ?? []} />
+      <TrapWords missed={state.missed ?? []} isPractice={!!state.practice} />
       <ol className="glass mt-8 space-y-2 rounded-2xl p-6 text-left">
         {ranked.map((p, i) => (
           <motion.li key={p.id} initial={{ x: -30, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.3 + i * 0.15 }}
@@ -467,7 +473,7 @@ function Final({ state, meId }: { state: RoomState; meId: string }) {
           </motion.li>
         ))}
       </ol>
-      <Link to="/" className="mt-8 inline-block rounded-xl bg-primary px-8 py-3 font-bold text-primary-foreground">Play again</Link>
+      <WhatNext dir={me?.dir ?? "zh2ja"} practice={!!state.practice} />
     </motion.div>
   );
 }
@@ -485,7 +491,7 @@ function SimilarityMeter({ seen }: { seen: { kind?: string; relation: string }[]
         <motion.div className="h-full bg-primary" initial={{ width: 0 }} animate={{ width: `${m.pct}%` }} transition={{ duration: 1.2, delay: 0.4 }} />
       </div>
       <p className="mt-3 text-sm text-muted-foreground">
-        Of the {m.total} words you saw, {m.same} meant the same in Chinese and Japanese, {m.partial} were half friends and {m.different} were false friends.
+        {similaritySentence(m)}
       </p>
     </div>
   );
@@ -547,7 +553,54 @@ function CopyLink({ code }: { code: string }) {
 }
 
 /** The words that tricked this player in this game; signed-in players can practice them. */
-function TrapWords({ missed }: { missed: Word[] }) {
+/** After the results: play again (main action), or go see the leaderboard, your trap words or the word pool. */
+function WhatNext({ dir, practice }: { dir: Direction; practice: boolean }) {
+  const { me } = useAuth();
+  const link = "glass rounded-xl px-4 py-2.5 text-sm font-semibold transition hover:ring-2 hover:ring-primary";
+  return (
+    <nav aria-label="What next" className="mt-8 flex flex-col items-center gap-4 pb-10">
+      <Link to="/" className="rounded-xl bg-primary px-10 py-4 text-lg font-bold text-primary-foreground shadow-lg hover:brightness-110">🎴 Play again</Link>
+      <div className="flex flex-wrap justify-center gap-2">
+        {/* Opens the board for the direction you just played, where your row is highlighted. */}
+        <Link to="/leaderboard" search={{ direction: dir }} className={link}>🏆 {me && !practice ? "See your rank" : "Leaderboard"}</Link>
+        {me && <Link to="/me" className={link}>🪤 My trap words</Link>}
+        <Link to="/words" className={link}>📚 Word pool</Link>
+      </div>
+    </nav>
+  );
+}
+
+/** End of a practice game: how many trap words you beat, and which ones you mastered. */
+function PracticeSummary({ state, mine }: { state: RoomState; mine: boolean }) {
+  const traps = (state.seen ?? []).filter((w) => w.trap);
+  const missed = new Set((state.missed ?? []).map((w) => w.id));
+  const beaten = traps.filter((w) => !missed.has(w.id)).length;
+  const mastered = state.mastered ?? [];
+  const pct = traps.length ? Math.round((beaten / traps.length) * 100) : 0;
+  return (
+    <div className="glass mx-auto mt-6 rounded-2xl p-5 text-left">
+      <div className="flex items-baseline justify-between gap-3">
+        <span className="text-xs uppercase tracking-[0.25em] text-muted-foreground">🎴 Practice game</span>
+        <b className="font-display text-3xl">{beaten} / {traps.length}</b>
+      </div>
+      <div className="mt-3 h-3 overflow-hidden rounded-full bg-secondary">
+        <motion.div className="h-full bg-success" initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 1.2, delay: 0.4 }} />
+      </div>
+      <p className="mt-3 text-sm">
+        {traps.length === 0 ? "This game had no trap words." : `You beat ${beaten} of ${mine ? "your" : "the"} ${traps.length} trap word${traps.length === 1 ? "" : "s"}.`}
+        {" "}The other cards were neighbors: the same kind of word, often sharing a character.
+      </p>
+      {mastered.length > 0 ? (
+        <p className="mt-2 text-sm text-success">✓ Mastered and off your list: <span className="font-['Noto_Serif_JP'] text-base">{mastered.join("、")}</span></p>
+      ) : (
+        <p className="mt-2 text-sm text-muted-foreground">Get a trap word right {MASTER_AFTER} practice games in a row to take it off your list.</p>
+      )}
+      <p className="mt-2 text-xs text-muted-foreground">Practice games don't count on the leaderboard.</p>
+    </div>
+  );
+}
+
+function TrapWords({ missed, isPractice = false }: { missed: Word[]; isPractice?: boolean }) {
   const { me, signIn } = useAuth();
   const nav = useNavigate();
   const [busy, setBusy] = useState(false);
@@ -559,11 +612,11 @@ function TrapWords({ missed }: { missed: Word[] }) {
   };
   return (
     <div className="glass mx-auto mt-6 rounded-2xl p-5 text-left">
-      <h3 className="text-xs uppercase tracking-[0.25em] text-muted-foreground">Words that tricked you</h3>
+      <h3 className="text-xs uppercase tracking-[0.25em] text-muted-foreground">{isPractice ? "Still tricky" : "Words that tricked you"}</h3>
       <ul className="mt-3 space-y-2">
         {missed.map((w) => (
           <li key={w.id} className="flex items-baseline gap-3">
-            <span className="font-['Noto_Serif_JP'] text-2xl font-semibold">{w.form}</span>
+            <span className="shrink-0 whitespace-nowrap font-['Noto_Serif_JP'] text-2xl font-semibold">{w.form}</span>
             <span className="min-w-0 text-sm"><b>JP</b> {w.ja} · <b>ZH</b> {w.zh}</span>
           </li>
         ))}
@@ -572,7 +625,7 @@ function TrapWords({ missed }: { missed: Word[] }) {
         {me ? (
           <>
             <span className="text-muted-foreground">Saved to your trap list.</span>
-            <button onClick={practice} disabled={busy} className="rounded-lg bg-primary px-4 py-2 font-semibold text-primary-foreground disabled:opacity-50">{busy ? "Dealing…" : "🎴 Practice my traps"}</button>
+            <button onClick={practice} disabled={busy} className="rounded-lg bg-primary px-4 py-2 font-semibold text-primary-foreground disabled:opacity-50">{busy ? "Dealing…" : isPractice ? "🎴 Practice again" : "🎴 Practice my traps"}</button>
             <Link to="/me" className="underline">See all</Link>
           </>
         ) : (

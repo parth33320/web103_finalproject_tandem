@@ -54,6 +54,13 @@ export function dealWord(w: Word, pool: Word[], n: number): RoundContent {
   return { word: { ...w, kind: "falseFriend" }, ...ja, zh };
 }
 
+/** "Of the 10 words you saw, 3 meant the same in Chinese and Japanese, 1 was a half friend and 6 were false friends." */
+export function similaritySentence(m: { total: number; same: number; partial: number; different: number }) {
+  const kind = (n: number, one: string, many: string) => (n === 1 ? `1 was ${one}` : `${n} were ${many}`);
+  return `Of the ${m.total} word${m.total === 1 ? "" : "s"} you saw, ${m.same} meant the same in Chinese and Japanese, `
+    + `${kind(m.partial, "a half friend", "half friends")} and ${kind(m.different, "a false friend", "false friends")}.`;
+}
+
 /** Share of the words seen that are true friends (same meaning in both languages). */
 export function similarity(seen: { relation: string }[]) {
   const counts = { true: 0, partial: 0, false: 0 } as Record<string, number>;

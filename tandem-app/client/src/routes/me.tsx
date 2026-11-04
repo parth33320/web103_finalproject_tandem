@@ -5,7 +5,7 @@ import { PageShell } from "@/components/PageShell";
 import { ErrorBlock, LoadingBlock, Spinner } from "@/components/Spinner";
 import { Meanings, RelationTag } from "@/components/words";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { api, DIRECTION_LABEL, type CommunityWord, type MissedWord, type ScoreRow } from "@/lib/api";
+import { api, DIRECTION_LABEL, MASTER_AFTER, type CommunityWord, type MissedWord, type ScoreRow } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { requireSignIn } from "@/lib/guard";
 import { createRoom } from "@/lib/room";
@@ -73,7 +73,7 @@ function MyPage() {
             <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
               <div>
                 <h2 className="font-display text-3xl font-bold">Words you keep missing</h2>
-                <p className="text-sm text-muted-foreground">Every wrong answer lands here on its own. Tap a word to study it.</p>
+                <p className="text-sm text-muted-foreground">Every wrong answer lands here on its own. Get a word right {MASTER_AFTER} times in a row in practice and it leaves the list. Tap a word to study it.</p>
               </div>
               <button onClick={practice} disabled={starting || data.missed.length === 0}
                 className="rounded-xl bg-primary px-5 py-3 font-bold text-primary-foreground disabled:opacity-40">
@@ -124,7 +124,10 @@ function TrapList({ words, onOpen }: { words: MissedWord[]; onOpen: (w: MissedWo
               <span className="block truncate text-sm">JP: {w.meaning_ja}</span>
               <span className="block truncate text-sm text-muted-foreground">ZH: {w.meaning_zh}</span>
             </span>
-            <span className="rounded-full bg-destructive/20 px-2.5 py-1 text-xs font-bold text-destructive" title="Times missed">×{w.miss_count}</span>
+            <span className="flex shrink-0 flex-col items-end gap-1">
+              <span className="rounded-full bg-destructive/20 px-2.5 py-1 text-xs font-bold text-destructive" title="Times missed">×{w.miss_count}</span>
+              {w.correct_streak > 0 && <span className="text-[11px] text-success" title="Right answers in a row in practice">✓ {w.correct_streak}/{MASTER_AFTER}</span>}
+            </span>
           </button>
         </li>
       ))}

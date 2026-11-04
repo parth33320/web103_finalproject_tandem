@@ -40,7 +40,9 @@ export type CommunityWord = WordRow & {
 };
 export type WordList = { words: CommunityWord[]; page: number; hasMore: boolean; approveAt: number };
 export type WordInput = { form: string; zh_form?: string; reading: string; pinyin: string; meaning_ja: string; meaning_zh: string; relation: Relation; note?: string };
-export type MissedWord = WordRow & { source: string; miss_count: number; last_missed_at: string };
+export type MissedWord = WordRow & { source: string; miss_count: number; correct_streak: number; last_missed_at: string };
+/** Right answers in a row in practice games before a trap word is mastered (must match MASTER_AFTER on the server). */
+export const MASTER_AFTER = 2;
 export type ScoreRow = { id: number; direction: Direction; score: number; correct: number; total: number; created_at: string };
 export type LeaderRow = { player_id: number; username: string; avatar_url: string | null; score: number; correct: number; total: number; games: number; created_at: string };
 export type ServerSettings = { dir: Direction; lang: string; voice: string; theme: string; muted: boolean };
