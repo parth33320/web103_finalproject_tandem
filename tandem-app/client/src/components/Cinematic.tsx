@@ -11,7 +11,7 @@ export function Cinematic({ tension = false, intro = true }: { tension?: boolean
       <div className="cine-spot absolute inset-0" />
       <div className="cine-haze absolute inset-0" />
       <div className={`cine-vignette absolute inset-0 ${tension ? "cine-tension" : ""}`} />
-      <div className="cine-grain absolute inset-0" />
+      <div className="cine-grain absolute -inset-[5%]" />
       <AnimatePresence>
         {bars && (
           <>
