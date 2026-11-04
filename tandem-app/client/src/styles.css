@@ -134,13 +134,18 @@
 
 @layer base {
   * { border-color: var(--color-border); }
+  /* Add these two rules to stop the mobile bouncing */
+  html, body {
+    overscroll-behavior: none;
+    touch-action: manipulation;
+  }
   body {
     background: var(--scene);
     background-color: var(--color-background);
-    background-attachment: fixed;
+    /*background-attachment: fixed;*/
     color: var(--color-foreground);
     font-family: var(--font-sans);
-    min-height: 100vh;
+    min-height: 100dvh;
   }
   h1, h2, h3 { font-family: var(--font-display); }
 }
