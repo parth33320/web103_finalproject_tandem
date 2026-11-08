@@ -90,13 +90,13 @@
   color: #fff;
 }
 .relation-badge.relation-true {
-  background: #2e7d32;
+  background: #2563eb;
 }
 .relation-badge.relation-false {
-  background: var(--color-ja, #b45140);
+  background: #ea580c;
 }
 .relation-badge.relation-partial {
-  background: #f57c00;
+  background: #7c3aed;
 }
 .missed-word-meanings {
   font-size: 0.9rem;
