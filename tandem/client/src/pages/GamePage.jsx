@@ -8,8 +8,6 @@ import { calculateAverageSpeed } from '../utils/speed.js';
 import QuestionCard from '../components/QuestionCard.jsx';
 import Timer from '../components/Timer.jsx';
 import RevealCard from '../components/RevealCard.jsx';
-import HintBar from '../components/HintBar.jsx';
-import MuteToggle from '../components/MuteToggle.jsx';
 import Spinner from '../components/Spinner.jsx';
 import '../styles/Game.css';
 
@@ -41,7 +39,6 @@ export default function GamePage() {
   const [elapsedTimes, setElapsedTimes] = useState([]);
 
   const [selectedChoiceIndex, setSelectedChoiceIndex] = useState(null);
-  const [categoryHintUsed, setCategoryHintUsed] = useState(false);
   const [showRevealModal, setShowRevealModal] = useState(false);
   const [isTimeout, setIsTimeout] = useState(false);
   const [isCorrect, setIsCorrect] = useState(false);
@@ -63,13 +60,8 @@ export default function GamePage() {
     const elapsed = 10;
     setElapsedTimes((prev) => [...prev, elapsed]);
 
-    if (currentQuestion) {
-      setWrongWordIds((prev) => [...prev, currentQuestion.wordId]);
-      setWrongWordDetails((prev) => [...prev, currentQuestion]);
-    }
-
     setShowRevealModal(true);
-  }, [showRevealModal, selectedChoiceIndex, currentQuestion]);
+  }, [showRevealModal, selectedChoiceIndex]);
 
   const { secondsLeft, isRunning, stop, reset } = useTimer({
     duration: 10,
@@ -106,9 +98,7 @@ export default function GamePage() {
     setIsTimeout(false);
 
     if (correct) {
-      let qPoints = 10;
-      if (categoryHintUsed) qPoints -= 2;
-      setScore((prev) => prev + Math.max(0, qPoints));
+      setScore((prev) => prev + 10);
       setCorrectCount((prev) => prev + 1);
     } else {
       setWrongWordIds((prev) => [...prev, currentQuestion.wordId]);
@@ -118,18 +108,12 @@ export default function GamePage() {
     setShowRevealModal(true);
   };
 
-  const handleUseCategoryHint = () => {
-    if (categoryHintUsed || selectedChoiceIndex !== null || !isRunning) return;
-    setCategoryHintUsed(true);
-  };
-
   const handleNextQuestion = async () => {
     setShowRevealModal(false);
 
     if (currentIndex + 1 < questions.length) {
       setCurrentIndex((prev) => prev + 1);
       setSelectedChoiceIndex(null);
-      setCategoryHintUsed(false);
       setIsTimeout(false);
       setIsCorrect(false);
       reset(10);
@@ -210,7 +194,6 @@ export default function GamePage() {
           Question {currentIndex + 1} of {questions.length}
         </div>
         <div className="game-score">Score: {score} pts</div>
-        <MuteToggle />
       </div>
 
       <Timer secondsLeft={secondsLeft} totalSeconds={10} />
@@ -222,15 +205,6 @@ export default function GamePage() {
           selectedChoiceIndex={selectedChoiceIndex}
           disabled={selectedChoiceIndex !== null || !isRunning}
           direction={activeDirection}
-        />
-      )}
-
-      {currentQuestion && (
-        <HintBar
-          category={currentQuestion.reveal?.category_ja || currentQuestion.reveal?.category_zh}
-          onUseCategoryHint={handleUseCategoryHint}
-          categoryHintUsed={categoryHintUsed}
-          disabled={selectedChoiceIndex !== null || !isRunning}
         />
       )}
 
