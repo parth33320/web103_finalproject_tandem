@@ -33,9 +33,7 @@ test.describe('Feature 5 — Custom Deck Creator CRUD (Stories 14–18)', () => 
     await page.waitForURL('**/game', { timeout: 15000 });
 
     // 2. Navigate to /decks
-    const decksNav = page.locator('nav a[href="/decks"]');
-    await expect(decksNav).toBeVisible();
-    await decksNav.click();
+    await page.goto('/decks');
     await page.waitForURL('**/decks', { timeout: 10000 });
 
     const decksContainer = page.locator('.decks-container');

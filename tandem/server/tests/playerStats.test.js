@@ -143,13 +143,19 @@ describe('Session PA: player_stats 1:1, non-RESTful recalculate/reset, stats rou
     }
   });
 
-  it('POST /api/reset truncates player_stats', async () => {
+  it('POST /api/reset truncates only scores table', async () => {
     const originalQuery = pool.query;
-    let truncated = false;
+    let truncatedScores = false;
+    let truncatedOther = false;
 
     pool.query = async (sql) => {
-      if (sql.includes('TRUNCATE') && sql.includes('player_stats')) {
-        truncated = true;
+      if (sql.includes('TRUNCATE')) {
+        if (sql.includes('scores')) {
+          truncatedScores = true;
+        }
+        if (sql.includes('player_stats') || sql.includes('players') || sql.includes('user_missed_words') || sql.includes('decks')) {
+          truncatedOther = true;
+        }
         return { rows: [] };
       }
       return { rows: [] };
@@ -162,7 +168,8 @@ describe('Session PA: player_stats 1:1, non-RESTful recalculate/reset, stats rou
     try {
       const res = await fetch(`${baseUrl}/api/reset`, { method: 'POST' });
       assert.equal(res.status, 200);
-      assert.ok(truncated, 'resetLeaderboard must execute TRUNCATE including player_stats');
+      assert.ok(truncatedScores, 'resetLeaderboard must execute TRUNCATE scores');
+      assert.equal(truncatedOther, false, 'resetLeaderboard must not truncate other tables');
     } finally {
       pool.query = originalQuery;
       server.close();

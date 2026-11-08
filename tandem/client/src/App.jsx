@@ -48,7 +48,7 @@ export default function App() {
         <nav aria-label="Main navigation">
           <NavLink to="/game">Play</NavLink>
           <NavLink to="/leaderboard">Leaderboard</NavLink>
-          {activeUser && (
+          {user && (
             <>
               <NavLink to="/decks">My Decks</NavLink>
               <NavLink to="/profile">Profile</NavLink>

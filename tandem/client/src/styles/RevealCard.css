@@ -53,15 +53,15 @@
   display: inline-block;
 }
 .relation-tag.relation-true {
-  background: rgba(255, 255, 255, 0.25);
+  background: #2563eb;
   color: #fff;
 }
 .relation-tag.relation-false {
-  background: rgba(0, 0, 0, 0.25);
+  background: #ea580c;
   color: #fff;
 }
 .relation-tag.relation-partial {
-  background: rgba(0, 0, 0, 0.2);
+  background: #7c3aed;
   color: #fff;
 }
 .reveal-content {
