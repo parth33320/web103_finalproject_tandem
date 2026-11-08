@@ -161,7 +161,7 @@ test.describe('Features 7–10: Red-Green-Refactor E2E & Component Test Suite', 
       finishSave();
 
       // Once resolved, button is re-enabled and toast is visible
-      await expect(page.locator('.toast-notification')).toBeVisible();
+      await expect(page.locator('.app-toast-notification')).toBeVisible();
       await expect(saveBtn).toBeEnabled();
     });
   });
@@ -198,7 +198,7 @@ test.describe('Features 7–10: Red-Green-Refactor E2E & Component Test Suite', 
       const saveBtn = page.locator('.create-deck-form button[type="submit"]');
       await saveBtn.click();
 
-      const toast = page.locator('.toast-notification');
+      const toast = page.locator('.app-toast-notification');
       await expect(toast).toBeVisible();
       await expect(toast).toContainText(/saved/i);
     });
@@ -233,7 +233,7 @@ test.describe('Features 7–10: Red-Green-Refactor E2E & Component Test Suite', 
       const removeBtn = page.locator('.remove-word-btn').first();
       await removeBtn.click();
 
-      const toast = page.locator('.toast-notification');
+      const toast = page.locator('.app-toast-notification');
       await expect(toast).toBeVisible();
       await expect(toast).toContainText(/removed/i);
     });
@@ -277,7 +277,7 @@ test.describe('Features 7–10: Red-Green-Refactor E2E & Component Test Suite', 
       await expect(nextBtn).toBeVisible();
       await nextBtn.click();
 
-      const toast = page.locator('.toast-notification');
+      const toast = page.locator('.app-toast-notification');
       await expect(toast).toBeVisible();
       await expect(toast).toContainText('Score saved!');
     });
@@ -322,7 +322,7 @@ test.describe('Features 7–10: Red-Green-Refactor E2E & Component Test Suite', 
       await expect(nextBtn).toBeVisible();
       await nextBtn.click();
 
-      const toast = page.locator('.toast-notification');
+      const toast = page.locator('.app-toast-notification');
       await expect(toast).toBeVisible();
       await expect(toast).toContainText('Score failed to save.');
     });

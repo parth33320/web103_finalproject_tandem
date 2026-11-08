@@ -22,7 +22,7 @@ p { line-height: 1.7; }
 .eyebrow { color: var(--color-ja); font-weight: 700; }
 .todo { padding: 20px; border: 1px dashed var(--color-border); border-radius: 12px; }
 
-.toast-notification {
+.app-toast-notification {
   position: fixed;
   bottom: 24px;
   right: 24px;

@@ -143,6 +143,7 @@ export default function GamePage() {
         score: score,
         direction: activeDirection,
         word_ids: wrongWordIds,
+        missed_word_ids: wrongWordIds,
         speed_ms: Math.round(avgSpeedSeconds * 1000),
       };
 
@@ -199,7 +200,7 @@ export default function GamePage() {
 
   return (
     <section className="game-container">
-      <div className={`toast-notification ${toastMessage ? 'visible' : ''}`} role="status">
+      <div className={`app-toast-notification ${toastMessage ? 'visible' : ''}`} role="status">
         {toastMessage}
       </div>
 
