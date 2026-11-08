@@ -161,6 +161,7 @@ export default function GamePage() {
         toast.error('Could not save score.');
         showCustomToast('Score failed to save.');
       } finally {
+        await new Promise((resolve) => setTimeout(resolve, 800));
         setSubmittingScore(false);
         navigate('/results', {
           state: {
