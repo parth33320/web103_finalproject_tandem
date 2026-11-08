@@ -10,7 +10,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <BrowserRouter>
       <PlayerProvider>
-        <Toaster position="top-right" />
+        <Toaster position="top-right" toastOptions={{ className: 'toast-notification' }} />
         <App />
       </PlayerProvider>
     </BrowserRouter>
