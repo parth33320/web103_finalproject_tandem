@@ -49,3 +49,18 @@
   gap: 12px;
   margin-top: 16px;
 }
+
+.toast-notification {
+  display: none;
+}
+.toast-notification.visible {
+  display: block;
+  position: fixed;
+  bottom: 1rem;
+  right: 1rem;
+  background: #333;
+  color: #fff;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  z-index: 9999;
+}

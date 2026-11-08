@@ -18,7 +18,15 @@ export default function GamePage() {
   const navigate = useNavigate();
   const { player } = usePlayer();
 
-  const direction = location.state?.direction || 'zh-ja';
+  const direction = location.state?.direction;
+
+  useEffect(() => {
+    if (!direction && !player) {
+      navigate('/');
+    }
+  }, [direction, player, navigate]);
+
+  const activeDirection = direction || 'zh-ja';
 
   const [questions, setQuestions] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -37,6 +45,12 @@ export default function GamePage() {
   const [showRevealModal, setShowRevealModal] = useState(false);
   const [isTimeout, setIsTimeout] = useState(false);
   const [isCorrect, setIsCorrect] = useState(false);
+  const [toastMessage, setToastMessage] = useState(null);
+
+  const showCustomToast = (msg) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3000);
+  };
 
   const currentQuestion = questions[currentIndex] || null;
 
@@ -65,7 +79,7 @@ export default function GamePage() {
   useEffect(() => {
     setLoading(true);
     setError(null);
-    api(`/words/round?direction=${direction}`)
+    api(`/words/round?direction=${activeDirection}`)
       .then((data) => {
         setQuestions(data.questions || []);
         setLoading(false);
@@ -76,7 +90,7 @@ export default function GamePage() {
         setError(err.message || 'Failed to load round. Please try again.');
         setLoading(false);
       });
-  }, [direction, reset]);
+  }, [activeDirection, reset]);
 
   const handleAnswerClick = (choice, choiceIndex) => {
     if (selectedChoiceIndex !== null || showRevealModal) return;
@@ -127,7 +141,7 @@ export default function GamePage() {
       const payload = {
         player_id: player?.id || 1,
         score: score,
-        direction: direction,
+        direction: activeDirection,
         word_ids: wrongWordIds,
         speed_ms: Math.round(avgSpeedSeconds * 1000),
       };
@@ -139,10 +153,12 @@ export default function GamePage() {
             body: JSON.stringify(payload),
           });
           toast.success('Score saved!');
+          showCustomToast('Score saved!');
         }
       } catch (err) {
         console.error('Failed to save score:', err);
         toast.error('Could not save score.');
+        showCustomToast('Score failed to save.');
       } finally {
         setSubmittingScore(false);
         navigate('/results', {
@@ -152,7 +168,7 @@ export default function GamePage() {
             correctCount,
             wrongWords: wrongWordDetails,
             questions,
-            direction,
+            direction: activeDirection,
             player,
             avgSpeedSeconds,
           },
@@ -183,6 +199,10 @@ export default function GamePage() {
 
   return (
     <section className="game-container">
+      <div className={`toast-notification ${toastMessage ? 'visible' : ''}`} role="status">
+        {toastMessage}
+      </div>
+
       <div className="game-header">
         <div className="game-progress">
           Question {currentIndex + 1} of {questions.length}
@@ -199,7 +219,7 @@ export default function GamePage() {
           onAnswer={handleAnswerClick}
           selectedChoiceIndex={selectedChoiceIndex}
           disabled={selectedChoiceIndex !== null || !isRunning}
-          direction={direction}
+          direction={activeDirection}
         />
       )}
 

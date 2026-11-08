@@ -12,17 +12,17 @@ test.describe('Feature 5 — Custom Deck Creator CRUD (Stories 14–18)', () => 
     // Assert redirect notice from ProtectedRoute is displayed
     const redirectNotice = page.locator('.redirect-notice');
     await expect(redirectNotice).toBeVisible();
-    await expect(redirectNotice).toContainText('Enter a username first.');
+    await expect(redirectNotice).toContainText('Login required.');
   });
 
   test('E2E: Log in, navigate to /decks, create deck, rename it, delete it — with toasts visible', async ({ page }) => {
     // 1. Log in on Home page
     await page.goto('/');
-    const uniqueUsername = `deck_${Date.now() % 100000000}_${Math.floor(Math.random() * 1000)}`;
+    const uname = `P${Date.now() % 99999}`;
 
     const usernameInput = page.locator('#username-input');
     await expect(usernameInput).toBeVisible();
-    await usernameInput.fill(uniqueUsername);
+    await usernameInput.fill(uname);
 
     // Click start to log in and set player
     const startBtn = page.locator('.start-btn.ja-btn');

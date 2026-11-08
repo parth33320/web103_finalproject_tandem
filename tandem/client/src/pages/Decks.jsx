@@ -10,6 +10,12 @@ export default function Decks() {
   const [decks, setDecks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [toastMessage, setToastMessage] = useState(null);
+
+  const showCustomToast = (msg) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3000);
+  };
 
   // New deck state
   const [newDeckTitle, setNewDeckTitle] = useState('');
@@ -71,6 +77,7 @@ export default function Decks() {
       setDecks((prev) => [created, ...prev]);
       setNewDeckTitle('');
       toast.success('Deck created!');
+      showCustomToast(`Deck "${created.deck_title}" saved successfully!`);
     } catch (err) {
       if (err.status === 401) {
         toast.error('Please log in first.');
@@ -116,6 +123,7 @@ export default function Decks() {
       );
       cancelEditing();
       toast.success('Deck saved!');
+      showCustomToast(`Deck renamed to "${updated.deck_title}"!`);
     } catch (err) {
       if (err.status === 401) {
         toast.error('Please log in first.');
@@ -135,6 +143,7 @@ export default function Decks() {
       await api(`/decks/${deckId}`, { method: 'DELETE' });
       setDecks((prev) => prev.filter((d) => d.id !== deckId));
       toast.success('Deck deleted.');
+      showCustomToast('Deck deleted successfully!');
     } catch (err) {
       if (err.status === 401) {
         toast.error('Please log in first.');
@@ -210,6 +219,7 @@ export default function Decks() {
         })
       );
       toast('Word removed.');
+      showCustomToast('Word removed from deck.');
     } catch (err) {
       if (err.status === 401) {
         toast.error('Please log in first.');
@@ -223,6 +233,11 @@ export default function Decks() {
 
   return (
     <section className="decks-container">
+      {toastMessage && (
+        <div className="toast-notification visible" role="status">
+          {toastMessage}
+        </div>
+      )}
       <h1>My Custom Decks</h1>
       <p className="decks-subtitle">Build custom study decks by searching and adding vocabulary words.</p>
 
