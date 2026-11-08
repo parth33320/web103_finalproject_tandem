@@ -20,18 +20,25 @@ test.describe('Feature 4 — Personal Missed Words History (Stories 11–13)', (
     await expect(startButton).toBeVisible();
     await startButton.click();
 
-    // Play through the round: intentionally answer question 1 wrong
+    // Play through the round: intentionally answer questions wrong
     for (let q = 1; q <= 10; q++) {
       await page.waitForSelector('.question-card', { timeout: 15000 });
 
-      // Intentionally pick an incorrect answer for question 1, and first choice for subsequent
       const choiceBtns = page.locator('.choice-btn');
       await expect(choiceBtns.first()).toBeVisible({ timeout: 10000 });
-      await choiceBtns.first().click();
 
-      // Reveal card modal appears
+      // For Q1 through Q3, click choiceBtns.nth(3) (last button) instead of first
+      // to avoid accidentally clicking correct answer when index is 0
+      if (q <= 3) {
+        await choiceBtns.nth(3).click();
+      } else {
+        await choiceBtns.first().click();
+      }
+
+      // Explicitly verify .reveal-modal-card appears and correct answer is highlighted
       const modal = page.locator('.reveal-modal-card');
       await expect(modal).toBeVisible({ timeout: 10000 });
+      await expect(page.locator('.choice-btn.correct')).toBeVisible({ timeout: 10000 });
 
       // Click Next / View Results
       const nextBtn = page.locator('.next-btn');
