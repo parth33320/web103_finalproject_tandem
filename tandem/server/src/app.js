@@ -18,6 +18,13 @@ import { resetLeaderboard } from './controllers/leaderboard.js';
 export const app = express();
 app.set('trust proxy', 1);
 app.disable('x-powered-by');
+app.use((req, res, next) => {
+  const start = Date.now();
+  res.on('finish', () => {
+    console.log(`[HTTP] ${req.method} ${req.originalUrl || req.url} ${res.statusCode} (${Date.now() - start}ms)`);
+  });
+  next();
+});
 app.use(helmet());
 app.use(
   helmet.contentSecurityPolicy({
@@ -30,6 +37,19 @@ app.use(
 );
 app.use(compression());
 app.use(express.json({ limit: '16kb' }));
+
+if (process.env.DATABASE_URL) {
+  pool.query(`CREATE TABLE IF NOT EXISTS player_stats (
+    player_id INTEGER PRIMARY KEY REFERENCES players(id) ON DELETE CASCADE,
+    total_rounds INTEGER NOT NULL DEFAULT 0,
+    best_score NUMERIC(8,2) NOT NULL DEFAULT 0,
+    avg_speed_ms NUMERIC(10,2) NOT NULL DEFAULT 0,
+    avatar_url TEXT,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )`).catch((err) => {
+    console.error('Failed to initialize player_stats table on startup:', err.message);
+  });
+}
 
 const PgSession = connectPg(session);
 const sessionStore = process.env.DATABASE_URL

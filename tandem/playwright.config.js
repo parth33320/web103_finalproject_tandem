@@ -4,7 +4,7 @@ export default defineConfig({
   testDir: './tests',
   timeout: 60000,
   use: {
-    baseURL: process.env.BASE_URL || 'https://my-new-unrelated-project.onrender.com',
+    baseURL: process.env.BASE_URL || 'http://localhost:5173',
     headless: true,
     video: 'on',
     launchOptions: {

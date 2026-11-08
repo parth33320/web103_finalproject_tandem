@@ -50,10 +50,10 @@
   margin-top: 16px;
 }
 
-.toast-notification {
+.app-toast-notification {
   display: none;
 }
-.toast-notification.visible {
+.app-toast-notification.visible {
   display: block;
   position: fixed;
   bottom: 1rem;

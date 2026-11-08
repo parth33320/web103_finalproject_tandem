@@ -56,7 +56,7 @@ test.describe('Feature 5 — Custom Deck Creator CRUD (Stories 14–18)', () => 
     await expect(deckCard).toBeVisible({ timeout: 10000 });
 
     // Assert toast notification visible for deck creation
-    const createToast = page.locator('.toast-notification');
+    const createToast = page.locator('.app-toast-notification');
     await expect(createToast).toBeVisible();
     await expect(createToast).toContainText(`Deck "${testDeckTitle}" saved successfully!`);
 
@@ -80,7 +80,7 @@ test.describe('Feature 5 — Custom Deck Creator CRUD (Stories 14–18)', () => 
     await expect(renamedCard).toBeVisible({ timeout: 10000 });
 
     // Assert toast notification visible for rename
-    const renameToast = page.locator('.toast-notification');
+    const renameToast = page.locator('.app-toast-notification');
     await expect(renameToast).toBeVisible();
     await expect(renameToast).toContainText(`Deck renamed to "${renamedDeckTitle}"!`);
 
@@ -97,7 +97,7 @@ test.describe('Feature 5 — Custom Deck Creator CRUD (Stories 14–18)', () => 
     await expect(page.locator('.deck-card', { hasText: renamedDeckTitle })).toHaveCount(0, { timeout: 10000 });
 
     // Assert toast notification visible for delete
-    const deleteToast = page.locator('.toast-notification');
+    const deleteToast = page.locator('.app-toast-notification');
     await expect(deleteToast).toBeVisible();
     await expect(deleteToast).toContainText('Deck deleted successfully!');
   });

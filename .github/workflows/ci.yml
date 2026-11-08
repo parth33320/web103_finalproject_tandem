@@ -32,6 +32,9 @@ jobs:
   test-e2e:
     name: test-e2e
     runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      BASE_URL: http://localhost:5173
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -48,6 +51,22 @@ jobs:
       - name: Build client
         run: |
           cd tandem && npm run build
+
+      - name: Verify DATABASE_URL secret
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "::warning ::DATABASE_URL secret is not set in GitHub Actions repository secrets."
+          fi
+
+      - name: Setup database schema and seed
+        run: |
+          cd tandem && npm run db:schema && npm run db:seed
+        continue-on-error: true
+
+      - name: Start local servers
+        run: |
+          cd tandem && (npm run dev &)
+          npx wait-on http://localhost:5173 http://localhost:3001/api/health --timeout 60000
 
       - name: Run e2e tests
         run: |

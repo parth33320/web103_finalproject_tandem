@@ -234,7 +234,7 @@ export default function Decks() {
   return (
     <section className="decks-container">
       {toastMessage && (
-        <div className="toast-notification visible" role="status">
+        <div className="app-toast-notification visible" role="status">
           {toastMessage}
         </div>
       )}
