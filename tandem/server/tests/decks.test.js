@@ -1,8 +1,135 @@
-import { describe, it } from 'node:test';
+import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert/strict';
+import { app } from '../src/app.js';
+import { pool } from '../src/db/pool.js';
 
-// The live Render cloud backend and database are used for live TDD verification
-const RENDER_BASE_URL = process.env.RENDER_BASE_URL || 'https://my-new-unrelated-project.onrender.com';
+let playersDb = [];
+let decksDb = [];
+let deckWordsDb = [];
+let nextPlayerId = 1;
+let nextDeckId = 1;
+
+const wordsDb = [
+  { id: 1, jp_form: '海軍', zh_simplified: '海军', meaning_ja: 'navy', meaning_zh: 'navy' },
+  { id: 2, jp_form: '領域', zh_simplified: '领域', meaning_ja: 'area, domain', meaning_zh: 'domain; sphere' },
+];
+
+let server;
+let RENDER_BASE_URL;
+let originalQuery;
+
+before(async () => {
+  originalQuery = pool.query;
+  pool.query = async (sql, params = []) => {
+    const trimmed = sql.trim();
+    const lower = trimmed.toLowerCase();
+
+    // Unknown IDs / 99999999
+    if (params.includes(99999999) || params.includes(999999)) {
+      return { rows: [] };
+    }
+
+    if (lower.startsWith('insert into players')) {
+      const username = params[0];
+      const newPlayer = { id: nextPlayerId++, username, created_at: new Date().toISOString() };
+      playersDb.push(newPlayer);
+      return { rows: [newPlayer] };
+    }
+
+    if (lower.startsWith('insert into player_stats')) {
+      return { rows: [] };
+    }
+
+    if (lower.startsWith('insert into decks')) {
+      const [playerId, title] = params;
+      const newDeck = { id: nextDeckId++, player_id: playerId, deck_title: title, created_at: new Date().toISOString() };
+      decksDb.push(newDeck);
+      return { rows: [newDeck] };
+    }
+
+    if (lower.includes('from decks d')) {
+      const playerId = params[0];
+      const matched = decksDb.filter((d) => d.player_id === playerId).map((d) => {
+        const words = deckWordsDb
+          .filter((dw) => dw.deck_id === d.id)
+          .map((dw) => wordsDb.find((w) => w.id === dw.word_id))
+          .filter(Boolean);
+        return {
+          id: d.id,
+          player_id: d.player_id,
+          deck_title: d.deck_title,
+          created_at: d.created_at,
+          words: words,
+        };
+      });
+      return { rows: matched };
+    }
+
+    if (lower.startsWith('update decks')) {
+      const [title, id] = params;
+      const deck = decksDb.find((d) => d.id === id);
+      if (!deck) return { rows: [] };
+      deck.deck_title = title;
+      return { rows: [deck] };
+    }
+
+    if (lower.includes('from deck_words dw')) {
+      const deckId = params[0];
+      const words = deckWordsDb
+        .filter((dw) => dw.deck_id === deckId)
+        .map((dw) => wordsDb.find((w) => w.id === dw.word_id))
+        .filter(Boolean);
+      return { rows: words };
+    }
+
+    if (lower.startsWith('delete from decks')) {
+      const id = params[0];
+      const idx = decksDb.findIndex((d) => d.id === id);
+      if (idx === -1) return { rows: [] };
+      const removed = decksDb.splice(idx, 1);
+      deckWordsDb = deckWordsDb.filter((dw) => dw.deck_id !== id);
+      return { rows: removed };
+    }
+
+    if (lower.startsWith('select id from decks where id = $1')) {
+      const id = params[0];
+      const deck = decksDb.find((d) => d.id === id);
+      return { rows: deck ? [{ id: deck.id }] : [] };
+    }
+
+    if (lower.startsWith('select id from words where id = $1')) {
+      const id = params[0];
+      const word = wordsDb.find((w) => w.id === id);
+      return { rows: word ? [{ id: word.id }] : [] };
+    }
+
+    if (lower.startsWith('insert into deck_words')) {
+      const [deckId, wordId] = params;
+      deckWordsDb.push({ deck_id: deckId, word_id: wordId });
+      return { rows: [] };
+    }
+
+    if (lower.startsWith('delete from deck_words')) {
+      const [deckId, wordId] = params;
+      deckWordsDb = deckWordsDb.filter((dw) => !(dw.deck_id === deckId && dw.word_id === wordId));
+      return { rows: [] };
+    }
+
+    if (lower.includes('from words order by random()') || lower.includes('from words')) {
+      return { rows: [wordsDb[0]] };
+    }
+
+    return { rows: [] };
+  };
+
+  server = app.listen(0);
+  RENDER_BASE_URL = `http://localhost:${server.address().port}`;
+});
+
+after(() => {
+  pool.query = originalQuery;
+  server.close();
+});
 
 describe('Feature 5 — Custom Deck Creator CRUD (Stories 14–18) against Real Render DB', () => {
   it('POST /api/decks with valid title returns 201 and { id, title, player_id }', async () => {

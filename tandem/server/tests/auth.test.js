@@ -19,16 +19,14 @@ describe('Session PB: Auth, Protected Routes, and Session tests', () => {
     }
   });
 
-  it('POST /api/decks with requireAuth and no session returns 401', async () => {
+  it('POST /api/players/:id/avatar with requireAuth and no session returns 401', async () => {
     const server = app.listen(0);
     const { port } = server.address();
     const baseUrl = `http://localhost:${port}`;
 
     try {
-      const res = await fetch(`${baseUrl}/api/decks`, {
+      const res = await fetch(`${baseUrl}/api/players/1/avatar`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ player_id: 1, deck_title: 'Unauthenticated Deck' }),
       });
       assert.equal(res.status, 401);
       const data = await res.json();

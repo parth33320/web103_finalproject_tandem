@@ -42,10 +42,17 @@ describe('Controllers API Tests', () => {
   it('POST /api/players creates a player', async () => {
     const originalQuery = pool.query;
     pool.query = async (sql, params) => {
-      assert.equal(params[0], 'testuser');
-      return {
-        rows: [{ id: 1, username: 'testuser', created_at: '2025-01-01T00:00:00.000Z' }]
-      };
+      if (sql.includes('INSERT INTO players')) {
+        assert.equal(params[0], 'testuser');
+        return {
+          rows: [{ id: 1, username: 'testuser', created_at: '2025-01-01T00:00:00.000Z' }]
+        };
+      }
+      if (sql.includes('INSERT INTO player_stats')) {
+        assert.equal(params[0], 1);
+        return { rows: [] };
+      }
+      return { rows: [] };
     };
 
     const server = app.listen(0);
@@ -167,7 +174,7 @@ describe('Controllers API Tests', () => {
       assert.equal(res.status, 201);
       const data = await res.json();
       assert.equal(data.id, 100);
-      assert.equal(executedQueries.length, 3); // 1 score insert + 2 missed words upserts
+      assert.equal(executedQueries.length, 4); // 1 score insert + 1 player_stats upsert + 2 missed words upserts
     } finally {
       pool.query = originalQuery;
       server.close();

@@ -386,22 +386,21 @@ export default function Profile() {
                   </button>
                 )}
               </div>
-              {profileData?.missed_words && profileData.missed_words.length > 0 ? (
-                <ul className="missed-words-list">
-                  {profileData.missed_words.map((item) => (
-                    <li key={item.word_id} className="missed-word-item">
-                      <div className="missed-header">
-                        <span className="missed-kanji">{item.jp_form || item.zh_simplified}</span>
-                        <span className="miss-count-tag">Missed {item.total_miss_count}×</span>
-                      </div>
-                      <div className="missed-details">
-                        <span><strong>Japanese:</strong> {item.meaning_ja}</span>
-                        <span><strong>Chinese:</strong> {item.meaning_zh}</span>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
+              <ul className="missed-words-list">
+                {profileData?.missed_words?.map((item) => (
+                  <li key={item.word_id} className="missed-word-item">
+                    <div className="missed-header">
+                      <span className="missed-kanji">{item.jp_form || item.zh_simplified}</span>
+                      <span className="miss-count-tag">Missed {item.total_miss_count}×</span>
+                    </div>
+                    <div className="missed-details">
+                      <span><strong>Japanese:</strong> {item.meaning_ja}</span>
+                      <span><strong>Chinese:</strong> {item.meaning_zh}</span>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+              {(!profileData?.missed_words || profileData.missed_words.length === 0) && (
                 <p className="no-data">No missed words recorded!</p>
               )}
             </div>
