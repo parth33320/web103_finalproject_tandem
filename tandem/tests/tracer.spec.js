@@ -8,7 +8,8 @@ test.describe('Feature 1 — Timed Game Loop (Stories 1–4)', () => {
     // Enter username
     const usernameInput = page.locator('#username-input');
     await expect(usernameInput).toBeVisible();
-    await usernameInput.fill('speed_runner');
+    const uname1 = `P${Date.now() % 99999}`;
+    await usernameInput.fill(uname1);
 
     // Click direction button
     const directionBtn = page.locator('.start-btn.ja-btn').first();
@@ -71,7 +72,7 @@ test.describe('Feature 3 / Stories 8–10 — Final Similarity Meter & Avg Answe
     // Ensure home page loaded
     const usernameInput = page.locator('#username-input');
     await expect(usernameInput).toBeVisible({ timeout: 15000 });
-    const uniqueUser = `speed_${Date.now().toString().slice(-5)}`;
+    const uniqueUser = `P${Date.now() % 99999}`;
     await usernameInput.fill(uniqueUser);
 
     // Start game
@@ -172,7 +173,7 @@ test.describe('Feature 2 — Dynamic Word Reveal Cards (Stories 5–7)', () => {
     // Enter username
     const usernameInput = page.locator('#username-input');
     await expect(usernameInput).toBeVisible({ timeout: 15000 });
-    const uniqueUser = `reveal_${Date.now().toString().slice(-5)}`;
+    const uniqueUser = `P${Date.now() % 99999}`;
     await usernameInput.fill(uniqueUser);
 
     // Click direction button to start game

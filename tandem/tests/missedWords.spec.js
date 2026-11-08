@@ -5,7 +5,7 @@ const BASE_URL = process.env.BASE_URL || 'https://my-new-unrelated-project.onren
 test.describe('Feature 4 — Personal Missed Words History (Stories 11–13)', () => {
   test('Play a round, answer at least one question wrong, finish round, navigate to /profile, assert .missed-words-list is visible and contains at least one entry', async ({ page }) => {
     test.setTimeout(60000);
-    const uniqueUsername = `test_user_${Date.now()}`;
+    const uname = `P${Date.now() % 99999}`;
 
     // Navigate to home page
     await page.goto(`${BASE_URL}/`, { waitUntil: 'networkidle' });
@@ -13,7 +13,7 @@ test.describe('Feature 4 — Personal Missed Words History (Stories 11–13)', (
     // Register unique player
     const usernameInput = page.locator('#username-input');
     await expect(usernameInput).toBeVisible({ timeout: 15000 });
-    await usernameInput.fill(uniqueUsername);
+    await usernameInput.fill(uname);
 
     // Start game in Chinese -> Japanese direction
     const startButton = page.locator('.start-btn.zh-btn').first();

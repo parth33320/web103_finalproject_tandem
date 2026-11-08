@@ -80,26 +80,26 @@ Complete the checklist below detailing each baseline, custom, and stretch featur
 
 ## Final Demo GIF
 
-🔗 [Here's a GIF walkthrough of the final project](docs/assets/feature1-timed-game-loop.gif)
+🔗 [Here's a GIF walkthrough of the final project](docs/assets/feature2-reveal-modal.gif)
 
 ## Reflection
 
 ### 1. What went well during this unit?
 
-The structured session-based approach using Jules allowed us to build each feature vertically with thorough end-to-end integration across schemas, routes, React views, and automated tests. We successfully unified state management and API communication so that complex flows like real-time quiz timing and score calculation functioned smoothly.
+Building each feature as a vertical slice using Jules sessions kept the codebase clean and isolated breaking changes. The structured PA→PB→PC→PE session approach let us implement the OAuth flow, Cloudinary upload, toast system, and 1:1 player_stats table incrementally without breaking existing features. The Playwright E2E tests run against the live Render deployment, so we have real proof that all features work in production — not just in a test sandbox.
 
 ### 2. What were some challenges your group faced in this unit?
 
-Coordinating GitHub OAuth with an existing username-based player system required careful schema design and session store management. Handling Render free-tier cold starts during live Playwright testing also pushed us to implement resilient network wait states and health check polling routines.
+Integrating GitHub OAuth with an existing username-based player system required careful schema design — adding github_id and avatar_url columns to the players table while keeping the username flow intact for the game. The Render free-tier SSL certificate required adding rejectUnauthorized: false to the pg.Pool config, which was a production-only bug not visible in local development. Ensuring toast notifications had both a react-hot-toast visual and a .toast-notification CSS class for E2E test selectors required a dual-state approach.
 
 ### 3. What were some of the highlights or achievements that you are most proud of in this project?
 
-Implementing the automatic player_stats 1:1 relationship and Cloudinary upload pipeline were major highlights. Ensuring 100% button disable safeguards and toast feedback elevated the user experience to feel like a production-grade application.
+The automatic player_stats 1:1 row creation on player insert was a clean example of database events driving data generation. Cloudinary's upload_stream API allowed us to process file uploads in memory without writing to disk, which suits Render's ephemeral filesystem. Watching the full human-simulation Playwright script play through all 10 questions, trigger the similarity meter, and confirm every rubric item in one run was satisfying.
 
 ### 4. Reflecting on your web development journey so far, how have you grown since the beginning of the course?
 
-We grew significantly in understanding RESTful API design, React state management, and PostgreSQL schema design. We transitioned from building simple isolated views to architecting scalable, full-stack Single-Page Applications with robust security and data consistency.
+We grew significantly in understanding how session-based authentication interacts with React context — the useAuth hook and PlayerContext working together so GitHub OAuth users and username-only players both get the same game experience. We also developed discipline in writing tests that run against production URLs, which revealed environment-specific bugs (SSL, cold-start timeouts) that unit tests miss.
 
 ### 5. Looking ahead, what are your goals related to web development, and what steps do you plan to take to achieve them?
 
-Next steps include deploying with custom domains, adding WebSocket real-time multiplayer features, and exploring React Query for optimistic client caching. We plan to continue building full-stack applications with strict automated testing practices.
+We would set up a staging environment on Render to catch production-only bugs earlier. For next steps: add WebSocket real-time leaderboard updates, implement custom deck game modes that use the user's saved deck as the question set, and add a spaced-repetition review feature for missed words.

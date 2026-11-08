@@ -107,7 +107,7 @@ test.describe('Feature 6: Split Direction Leaderboards + Reset E2E', () => {
 
     // Assert table empties with empty message confirmation
     await expect(page.locator('.empty-msg')).toBeVisible();
-    await expect(page.locator('.empty-msg')).toHaveText('No scores logged for this direction yet. Play a game to get on the board!');
+    await expect(page.locator('.empty-msg')).toHaveText('No scores yet for this direction');
     await expect(page.locator('.leaderboard-table')).toHaveCount(0);
   });
 });
