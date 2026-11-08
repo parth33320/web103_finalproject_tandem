@@ -5,11 +5,13 @@ import { readFile } from 'node:fs/promises';
 
 dotenv.config({ path: fileURLToPath(new URL('../../.env', import.meta.url)), quiet: true });
 
-pg.defaults.ssl = { rejectUnauthorized: false };
+const connectionString = process.env.DATABASE_URL
+  ? process.env.DATABASE_URL.replace(/[?&]sslmode=[^&]*/g, '')
+  : undefined;
 
 export const pool = new pg.Pool(
-  process.env.DATABASE_URL
-    ? { connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } }
+  connectionString
+    ? { connectionString, ssl: { rejectUnauthorized: false } }
     : undefined
 );
 
