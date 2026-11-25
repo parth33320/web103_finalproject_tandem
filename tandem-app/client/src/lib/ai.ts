@@ -1,8 +1,12 @@
 if (typeof window !== "undefined") {
-  (self as unknown as { FIREBASE_APPCHECK_DEBUG_TOKEN?: string }).FIREBASE_APPCHECK_DEBUG_TOKEN =
-    "B52A6FDF-EC21-4F7F-ACF0-D6AA214A2D34";
+  const debugToken = import.meta.env["VITE_APPCHECK_DEBUG_TOKEN"];
+  if (debugToken) {
+    (self as unknown as { FIREBASE_APPCHECK_DEBUG_TOKEN?: string }).FIREBASE_APPCHECK_DEBUG_TOKEN = debugToken;
+  }
   initializeAppCheck(app, {
-    provider: new ReCaptchaEnterpriseProvider("6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI"),
+    provider: new ReCaptchaEnterpriseProvider(
+      import.meta.env["VITE_RECAPTCHA_SITE_KEY"] || "6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI"
+    ),
     isTokenAutoRefreshEnabled: true,
   });
 }
