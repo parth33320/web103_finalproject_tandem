@@ -21,6 +21,7 @@ import { similarity, similaritySentence, type Direction } from "@/lib/content";
 import { SiteNav } from "@/components/PageShell";
 import { MASTER_AFTER } from "@/lib/api";
 import { HINT_COST, HINT_LABEL, HINT_ORDER, eliminated, pointsFor, type HintKind } from "@/lib/hints";
+import { generateContextSentence, generateLanguageMnemonic, type AiResult } from "@/lib/ai";
 import table from "@/assets/table-felt.jpg";
 
 export const Route = createFileRoute("/room/$code")({
@@ -263,6 +264,37 @@ function WordFace({ state, meName }: { state: RoomState; meName: string }) {
   const { s } = useSettings();
   const reveal = state.phase === "reveal";
   const showZh = s.dir === "ja2zh";
+  const [aiOutput, setAiOutput] = useState<AiResult<string> | null>(null);
+  const [aiBusy, setAiBusy] = useState(false);
+
+  // Reset AI output whenever a new card is dealt
+  useEffect(() => { setAiOutput(null); }, [state.round, state.phase]);
+
+  const handleContext = async () => {
+    setAiBusy(true);
+    try {
+      const res = await generateContextSentence(
+        showZh ? w.zhForm : w.form,
+        showZh ? w.pinyin : w.reading,
+        showZh ? "Chinese" : "Japanese",
+        s.forceCloud
+      );
+      setAiOutput(res);
+    } catch {
+      toast.error("AI sentence unavailable right now.");
+    } finally { setAiBusy(false); }
+  };
+
+  const handleMnemonic = async () => {
+    setAiBusy(true);
+    try {
+      const res = await generateLanguageMnemonic(w.form, w.reading, w.pinyin, w.ja, w.zh, w.relation, s.forceCloud);
+      setAiOutput(res);
+    } catch {
+      toast.error("AI memory trick unavailable right now.");
+    } finally { setAiBusy(false); }
+  };
+
   return (
     <div dir="ltr" className="flex h-full min-h-0 flex-col p-5 text-center md:p-6">
       <span className="text-xs uppercase tracking-[0.3em] opacity-60">Card {state.round} / {TOTAL_ROUNDS}</span>
@@ -293,9 +325,52 @@ function WordFace({ state, meName }: { state: RoomState; meName: string }) {
           <span dir="ltr" className="mt-4 px-2 font-display text-lg italic md:text-xl">What does it mean in {showZh ? "Chinese" : "Japanese"}?</span>
         </div>
       )}
+      {/* During Question Phase (under "What does it mean in...") */}
+      {!reveal && (
+        <div className="mt-3">
+          <button
+            type="button"
+            onClick={handleContext}
+            disabled={aiBusy}
+            className="rounded-full border border-paper-ink/30 px-3 py-1 text-xs font-semibold hover:bg-paper-ink/10 disabled:opacity-50"
+          >
+            {aiBusy ? "Thinking…" : "💬 See in a sentence"}
+          </button>
+          {aiOutput && (
+            <div className="mt-2 rounded-lg bg-paper-ink/10 p-2 text-xs">
+              <p className="font-['Noto_Serif_JP'] text-sm font-semibold">{aiOutput.data}</p>
+              <span className="mt-1 inline-block text-[10px] uppercase tracking-wider opacity-70">
+                {aiOutput.source === "on-device" ? "⚡ On-Device (Nano)" : "☁️ Cloud (Gemini)"} · {aiOutput.ms}ms
+              </span>
+            </div>
+          )}
+        </div>
+      )}
       {reveal && (
         <div className="max-h-28 overflow-y-auto rounded-lg border border-paper-ink/20 p-3 text-[11px] italic leading-snug [overflow-wrap:anywhere] md:text-xs">
           ✦ For {meName}: {personalFact(w, meName, state.round)}
+        </div>
+      )}
+      {/* During Reveal Phase (under the fun fact box) */}
+      {reveal && (
+        <div className="mt-2">
+          {!aiOutput ? (
+            <button
+              type="button"
+              onClick={handleMnemonic}
+              disabled={aiBusy}
+              className="rounded-full bg-primary px-3 py-1 text-xs font-bold text-primary-foreground disabled:opacity-50"
+            >
+              {aiBusy ? "Generating…" : "✨ AI Memory Trick"}
+            </button>
+          ) : (
+            <div className="rounded-lg border border-primary/40 bg-primary/10 p-2 text-xs">
+              <p className="font-semibold">{aiOutput.data}</p>
+              <span className="mt-1 inline-block text-[10px] uppercase tracking-wider opacity-70">
+                {aiOutput.source === "on-device" ? "⚡ On-Device (Nano)" : "☁️ Cloud (Gemini)"} · {aiOutput.ms}ms
+              </span>
+            </div>
+          )}
         </div>
       )}
     </div>

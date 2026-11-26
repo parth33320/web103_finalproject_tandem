@@ -12,6 +12,7 @@
     "format": "prettier --write .",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:e2e": "playwright test",
     "start": "node .output/server/index.mjs",
     "build:server-content": "bun build src/lib/content.ts --target=node --outfile ../server/content.js --banner \"// GENERATED from src/lib/content.ts + src/lib/words.ts + src/data/wordPool.js (bun run build:server-content). Do not edit by hand.\""
   },
@@ -79,6 +80,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.32.0",
+    "@playwright/test": "^1.65.1",
     "@testing-library/jest-dom": "^6.6.0",
     "@testing-library/react": "^16.0.0",
     "@types/node": "^22.16.5",

@@ -16,8 +16,8 @@ export const DIRECTIONS: { id: Direction; label: string; hint: string }[] = [
   { id: "ja2zh", label: "I know Japanese → guess Chinese", hint: "See a Chinese word, pick its Chinese meaning." },
   { id: "en", label: "I know neither (English)", hint: "Pure guessing from the characters — the control group." },
 ];
-export type Settings = { name: string; lang: Lang; voice: string; theme: Theme; muted: boolean; dir: Direction };
-const DEFAULT: Settings = { name: "", lang: "en", voice: "", theme: "felt", muted: false, dir: "zh2ja" };
+export type Settings = { name: string; lang: Lang; voice: string; theme: Theme; muted: boolean; dir: Direction; forceCloud: boolean };
+const DEFAULT: Settings = { name: "", lang: "en", voice: "", theme: "felt", muted: false, dir: "zh2ja", forceCloud: false };
 
 const Ctx = createContext<{ s: Settings; set: (p: Partial<Settings>) => void }>({ s: DEFAULT, set: () => {} });
 

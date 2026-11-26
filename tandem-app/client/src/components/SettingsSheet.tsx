@@ -40,6 +40,15 @@ export function SettingsSheet({ className = "" }: { className?: string }) {
           <SheetDescription>{me ? "Saved to your account, so they follow you to any device." : "Saved in this browser. Sign in to keep them on every device."}</SheetDescription>
         </SheetHeader>
         <div className="mt-6 space-y-7">
+          <Group label="AI Inference Mode">
+            <div className="grid grid-cols-2 gap-2">
+              <Chip active={!s.forceCloud} onClick={() => set({ forceCloud: false })}>⚡ Hybrid (Nano + Cloud)</Chip>
+              <Chip active={s.forceCloud} onClick={() => set({ forceCloud: true })}>☁️ Cloud Only</Chip>
+            </div>
+            <p className="mt-2 text-xs text-muted-foreground">
+              Hybrid runs Gemini Nano locally in Chrome for instant hints, falling back to Cloud when needed.
+            </p>
+          </Group>
           <Group label="Your host speaks">
             <div className="grid grid-cols-3 gap-2">
               {LANGS.map((l) => <Chip key={l.code} active={s.lang === l.code} onClick={() => set({ lang: l.code as Lang, voice: "" })}>{l.label}</Chip>)}

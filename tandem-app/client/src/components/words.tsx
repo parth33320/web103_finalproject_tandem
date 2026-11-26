@@ -6,6 +6,7 @@ import { api, ApiError, RELATION_STYLE, type CommunityWord, type WordInput } fro
 import { useAuth } from "@/lib/auth";
 import { RELATION_LABEL, validateWord, type Relation } from "@/lib/words";
 import { Spinner } from "./Spinner";
+import { verifyAndEnrichWord } from "@/lib/ai";
 
 export function RelationTag({ rel }: { rel: Relation }) {
   return <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider ${RELATION_STYLE[rel]}`}>{RELATION_LABEL[rel]}</span>;
@@ -86,8 +87,28 @@ export function WordForm({ initial, submitLabel, onSubmit, onCancel }: {
   const [f, setF] = useState<WordInput>({ ...EMPTY, ...initial, zh_form: initial?.zh_form && initial.zh_form !== initial.form ? initial.zh_form : "" });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
+  const [aiFilling, setAiFilling] = useState(false);
   const same = f.relation === "true";
   const up = (p: Partial<WordInput>) => { setF((x) => ({ ...x, ...p })); setErrors((e) => { const n = { ...e }; for (const k of Object.keys(p)) delete n[k]; return n; }); };
+
+  const autoFillWithCloud = async () => {
+    if (!f.form.trim()) { toast.error("Enter Chinese/Japanese characters first."); return; }
+    setAiFilling(true);
+    try {
+      const { data, ms } = await verifyAndEnrichWord(f.form.trim());
+      up({
+        reading: data.reading,
+        pinyin: data.pinyin,
+        meaning_ja: data.meaning_ja,
+        meaning_zh: data.meaning_zh,
+        relation: data.relation,
+        note: data.note,
+      });
+      toast.success(`Verified via ☁️ Cloud Gemini in ${ms}ms!`);
+    } catch {
+      toast.error("Could not auto-verify word. Please fill fields manually.");
+    } finally { setAiFilling(false); }
+  };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -104,7 +125,7 @@ export function WordForm({ initial, submitLabel, onSubmit, onCancel }: {
 
   return (
     <form onSubmit={submit} noValidate className="glass space-y-5 rounded-3xl p-5 sm:p-8">
-      <fieldset disabled={busy} className="space-y-5 disabled:opacity-70">
+      <fieldset disabled={busy || aiFilling} className="space-y-5 disabled:opacity-70">
         <Field label="Relationship" error={errors["relation"]}>
           <div className="grid grid-cols-3 gap-2">
             {(["false", "partial", "true"] as Relation[]).map((r) => (
@@ -120,7 +141,17 @@ export function WordForm({ initial, submitLabel, onSubmit, onCancel }: {
         </Field>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Characters" error={errors["form"]} hint="As written in Japanese, e.g. 手紙">
-            <Input value={f.form} onChange={(v) => up({ form: v })} lang="ja" big maxLength={8} />
+            <div className="flex flex-col gap-2">
+              <Input value={f.form} onChange={(v) => up({ form: v })} lang="ja" big maxLength={8} />
+              <button
+                type="button"
+                onClick={autoFillWithCloud}
+                disabled={aiFilling || !f.form.trim()}
+                className="rounded-lg border border-primary px-3 py-1.5 text-xs font-semibold text-primary hover:bg-primary/10 disabled:opacity-40"
+              >
+                {aiFilling ? "Verifying in Cloud…" : "☁️ Auto-Fill & Verify with AI"}
+              </button>
+            </div>
           </Field>
           <Field label="Chinese form (optional)" error={errors["zh_form"]} hint="Only if simplified Chinese differs, e.g. 汽车">
             <Input value={f.zh_form ?? ""} onChange={(v) => up({ zh_form: v })} lang="zh" big maxLength={8} />
